@@ -8,6 +8,7 @@
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
     
     <style>
         /* --- 1. Global Styles & Theme --- */
@@ -21,6 +22,7 @@
             --color-text: #333;
             --color-leader: #ffd700; /* Gold */
             --color-coleader: #c0c0c0; /* Silver */
+            --color-me-message-bg: #dcf8c6; /* WhatsApp "me" green */
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             --radius: 8px;
         }
@@ -179,6 +181,11 @@
         .btn-icon {
             padding: 8px 10px;
             font-size: 1.1rem;
+        }
+        
+        .btn-sm {
+            padding: 3px 6px;
+            font-size: 0.75rem;
         }
 
         .form-group {
@@ -344,6 +351,24 @@
             box-shadow: var(--shadow);
             overflow: hidden;
         }
+        
+        /* ★★★ NEW: Pinned Message ★★★ */
+        .pinned-message {
+            padding: 10px 15px;
+            background-color: #fff8e1;
+            border-bottom: 1px solid #ffeeba;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .pinned-message-content {
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
         .chat-box {
             flex: 1;
             padding: 20px;
@@ -351,6 +376,29 @@
             display: flex;
             flex-direction: column;
         }
+        
+        /* ★★★ NEW: Chat Message Actions (Pin/Delete) ★★★ */
+        .message-actions {
+            display: none; /* Hide by default */
+            margin-left: 10px;
+            margin-right: 10px;
+            align-self: center;
+        }
+        .chat-message:hover .message-actions {
+            display: block; /* Show on hover */
+        }
+        .message-actions .btn-icon {
+            padding: 2px 5px;
+            font-size: 0.8rem;
+            background: none;
+            border: none;
+            color: var(--color-dark-gray);
+            cursor: pointer;
+        }
+        .message-actions .btn-icon:hover {
+            color: var(--color-primary);
+        }
+
         .chat-message {
             max-width: 80%;
             margin-bottom: 15px;
@@ -364,10 +412,26 @@
             flex-shrink: 0;
         }
         .message-content {
-            background-color: var(--color-light-gray);
             border-radius: var(--radius);
             padding: 10px 15px;
         }
+        
+        /* ★★★ NEW: "Me" (Right) vs "Other" (Left) styles ★★★ */
+        .chat-message.other {
+            flex-direction: row; /* Default */
+            align-self: flex-start;
+        }
+        .chat-message.me {
+            flex-direction: row-reverse; /* My messages on the right */
+            align-self: flex-end;
+        }
+        .chat-message.me .message-content {
+            background-color: var(--color-me-message-bg);
+        }
+        .chat-message.other .message-content {
+            background-color: var(--color-light-gray);
+        }
+        
         .message-sender {
             font-weight: 600;
             font-size: 0.9rem;
@@ -382,7 +446,28 @@
             margin-top: 5px;
         }
         
-        /* Special Assembly Styles */
+        /* ★★★ NEW: Media (Image/Video) in chat ★★★ */
+        .message-media {
+            margin-top: 10px;
+        }
+        .message-media img,
+        .message-media video {
+            max-width: 100%;
+            border-radius: var(--radius);
+            max-height: 300px;
+            cursor: pointer;
+        }
+        .message-media-download {
+            display: inline-block;
+            padding: 8px 12px;
+            background-color: var(--color-primary);
+            color: var(--color-white);
+            border-radius: var(--radius);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        /* Special Assembly Styles (Overrides) */
         .message-leader .message-content {
             background-color: #fff8e1; /* Light gold */
             border: 1px solid var(--color-leader);
@@ -399,8 +484,15 @@
             color: #5a6268; /* Dark Silver */
             font-weight: 700;
         }
+        
+        /* Override for "me" special roles */
+        .chat-message.me.message-leader .message-content,
+        .chat-message.me.message-coleader .message-content {
+             background-color: var(--color-me-message-bg); /* Keep "me" green */
+        }
 
-        /* --- ★★★ NEW CHAT CONTROLS ★★★ --- */
+
+        /* --- ★★★ MODIFIED CHAT CONTROLS ★★★ --- */
         .chat-controls-container {
             padding: 10px 20px 0 20px;
             background-color: #fdfdfd;
@@ -430,22 +522,40 @@
             cursor: pointer;
         }
 
+        /* ★★★ NEW: File Input Wrapper ★★★ */
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-wrapper .btn {
+            padding: 10px 12px;
+            font-size: 1.1rem;
+        }
+        .file-input-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
         .chat-input-form {
             display: flex;
-            padding: 10px 20px 20px 20px; /* Adjusted padding */
-            /* border-top: 1px solid var(--color-light-gray); */ /* Removed border */
+            padding: 10px 20px 20px 20px;
             background-color: #fdfdfd;
+            align-items: center; /* Align file button */
         }
-        /* --- ★★★ END NEW STYLES ★★★ --- */
-
-        .chat-input-form input {
+        
+        .chat-input-form input[type="text"] {
             flex: 1;
             margin: 0;
             border-right: 0;
             border-top-right-radius: 0;
             border-bottom-right-radius: 0;
         }
-        .chat-input-form .btn {
+        .chat-input-form .btn { /* Submit button */
             border-top-left-radius: 0;
             border-bottom-left-radius: 0;
         }
@@ -727,7 +837,7 @@
                                     <option value="Delhi">Delhi</option>
                                     <option value="Jammu and Kashmir">Jammu and Kashmir</option>
                                     <option value="Ladakh">Ladakh</option>
-                                    <option value="Lakshadweep">Lakshadweep</option>
+                                    <option value="Lakshadweeep">Lakshadweeep</option>
                                     <option value="Puducherry">Puducherry</option>
                                 </select>
                             </div>
@@ -800,6 +910,9 @@
                     </div>
                     <div class="chat-main">
                         <div class="card-title" style="padding: 15px 20px; margin: 0; border-radius: 0;">🗣 General Assembly</div>
+                        
+                        <div id="ga-pinned-message" class="pinned-message" style="display: none;"></div>
+
                         <div class="chat-box" id="ga-chat-box">
                             </div>
                         
@@ -807,7 +920,11 @@
                             </div>
 
                         <form id="ga-chat-form" class="chat-input-form">
-                            <input type="text" id="ga-chat-input" class="form-control" placeholder="Type your message..." autocomplete="off" required>
+                            <div class="file-input-wrapper">
+                                <button type="button" class="btn btn-secondary">📎</button>
+                                <input type="file" id="ga-file-input" accept="image/*,video/*">
+                            </div>
+                            <input type="text" id="ga-chat-input" class="form-control" placeholder="Type your message..." autocomplete="off">
                             <button type="submit" class="btn btn-primary">Send</button>
                         </form>
                     </div>
@@ -822,6 +939,9 @@
                     </div>
                     <div class="chat-main">
                         <div class="card-title" style="padding: 15px 20px; margin: 0; border-radius: 0;">👑 Special Assembly</div>
+                        
+                        <div id="sa-pinned-message" class="pinned-message" style="display: none;"></div>
+                        
                         <div class="chat-box" id="sa-chat-box">
                             </div>
                         
@@ -829,7 +949,11 @@
                             </div>
 
                         <form id="sa-chat-form" class="chat-input-form">
-                            <input type="text" id="sa-chat-input" class="form-control" placeholder="Type your message..." autocomplete="off" required>
+                            <div class="file-input-wrapper">
+                                <button type="button" class="btn btn-secondary">📎</button>
+                                <input type="file" id="sa-file-input" accept="image/*,video/*">
+                            </div>
+                            <input type="text" id="sa-chat-input" class="form-control" placeholder="Type your message..." autocomplete="off">
                             <button type="submit" class="btn btn-primary">Post</button>
                         </form>
                         <div id="sa-post-error" class="alert alert-danger" style="display: none; margin: 20px;">Only Leader and Co-Leaders can post here.</div>
@@ -964,6 +1088,7 @@
                     <a href="#" class="dashboard-button" data-action="show-advisory-inbox">🧠 Advisory Inbox</a>
                     <a href="#" class="dashboard-button" data-action="show-create-draft">✍️ Create Draft Rule</a>
                     <a href="#" class="dashboard-button" data-action="show-cabinet-management">🎖️ Cabinet Management</a>
+                    <a href="#" class="dashboard-button" data-action="export-player-data">📊 Export Player Data (JSON)</a>
                 </div>
                 
                 <div id="new-registrations-card" class="card" style="margin-top: 30px;">
@@ -971,7 +1096,6 @@
                     <div id="new-registrations-list"></div>
                 </div>
             </div>
-
             <div id="players-actions-page" class="page">
                 <div class="card">
                     <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
@@ -1064,7 +1188,7 @@
         document.addEventListener('DOMContentLoaded', () => {
 
             // --- 1. FIREBASE SETUP ---
-            // 🔴 यह आपका FIREBASE CONFIG कोड है (पहले से भरा हुआ)
+            // 🔴 यह आपका FIREBASE CONFIG कोड है
             const firebaseConfig = {
               apiKey: "AIzaSyDkKkOLlq-Ipr8mgzd5hfE6X-qkQgAdYCE",
               authDomain: "clanportal.firebaseapp.com",
@@ -1078,8 +1202,9 @@
             // Initialize Firebase
             firebase.initializeApp(firebaseConfig);
             
-            // 'db' अब हमारा ऑनलाइन Firestore डेटाबेस है
             const db = firebase.firestore(); 
+            // ★★★ NEW: Firebase Storage reference ★★★
+            const storage = firebase.storage();
 
             // --- 2. State and Database References ---
 
@@ -1089,7 +1214,12 @@
                 currentDraftId: null,
                 viewingPlayerId: null,
                 allUsersCache: [], // सभी यूज़र्स को कैश करने के लिए
-                listeners: {} // Real-time listeners को मैनेज करने के लिए
+                listeners: {}, // Real-time listeners को मैनेज करने के लिए
+                // ★★★ NEW: Store files being uploaded ★★★
+                fileToUpload: {
+                    ga: null,
+                    sa: null
+                }
             };
 
             // Database collections के रेफरेन्स
@@ -1106,14 +1236,15 @@
             // --- 3. Initialization ---
 
             async function initApp() {
-                // यह 'meta' डॉक्यूमेंट को सेट अप करेगा (अगर मौजूद नहीं है)
                 try {
                     const metaDoc = await metaCollection.doc('main').get();
                     if (!metaDoc.exists) {
                         await metaCollection.doc('main').set({
                             cabinet: [],
-                            newRegistrations: []
-                        });
+                            newRegistrations: [],
+                            pinnedMessageGA: null, // ★★★ NEW
+                            pinnedMessageSA: null  // ★★★ NEW
+                        }, { merge: true });
                         console.log("Initialized 'meta/main' document.");
                     }
                 } catch (error) {
@@ -1189,6 +1320,12 @@
 
             function showPage(pageId, context = null) {
                 detachAllListeners();
+                
+                // ★★★ NEW: Clear file uploads on page change ★★★
+                appState.fileToUpload = { ga: null, sa: null };
+                document.getElementById('ga-file-input').value = null;
+                document.getElementById('sa-file-input').value = null;
+
 
                 document.querySelectorAll('.page').forEach(page => {
                     page.classList.remove('active');
@@ -1262,48 +1399,78 @@
 
             function attachEventListeners() {
                 document.body.addEventListener('click', (e) => {
+                    // Use `closest` for data-action to catch clicks on icons inside buttons
                     let target = e.target.closest('[data-action]');
                     if (!target) return;
 
                     const action = target.dataset.action;
                     if (action) {
-                        e.preventDefault(); 
+                        // e.preventDefault(); // Only prevent if it's not a link action like export
                         
                         if (action.startsWith('show-')) {
+                            e.preventDefault();
                             const pageId = action.replace('show-', '') + '-page';
                             showPage(pageId);
                         }
                         
                         switch (action) {
                             case 'logout':
+                                e.preventDefault();
                                 handleLogout();
                                 break;
                             case 'show-draft-detail':
+                                e.preventDefault();
                                 showPage('draft-detail-page', { draftId: target.dataset.id });
                                 break;
                             case 'draft-vote':
+                                e.preventDefault();
                                 handleDraftVote(appState.currentDraftId, target.dataset.vote);
                                 break;
                             case 'activate-draft':
+                                e.preventDefault();
                                 handleActivateLaw(target.dataset.id); // Pass ID from button
                                 break;
                             case 'leader-delete-rule':
+                                e.preventDefault();
                                 handleRemoveRule(target.dataset.id);
                                 break;
                             case 'show-player-details':
+                                e.preventDefault();
                                 showPage('player-details-page', { userId: target.dataset.id });
                                 break;
                             case 'player-action':
+                                e.preventDefault();
                                 handlePlayerAction(target.dataset.id, target.dataset.task);
                                 break;
                             case 'acknowledge-registration':
+                                e.preventDefault();
                                 acknowledgeRegistration(target.dataset.id);
                                 break;
                             case 'mark-advice':
+                                e.preventDefault();
                                 markAdvice(target.dataset.id, target.dataset.status);
                                 break;
                             case 'reply-dm':
+                                e.preventDefault();
                                 handleQuarryReply(target.dataset.id);
+                                break;
+                            // ★★★ NEW: Chat Message Actions ★★★
+                            case 'pin-message':
+                                e.preventDefault();
+                                handlePinMessage(target.dataset.id, target.dataset.room);
+                                break;
+                            case 'unpin-message':
+                                e.preventDefault();
+                                handlePinMessage(null, target.dataset.room); // Set to null to unpin
+                                break;
+                            case 'delete-message':
+                                e.preventDefault();
+                                handleDeleteMessage(target.dataset.id, target.dataset.room);
+                                break;
+                            // ★★★ NEW: Leader Data Export ★★★
+                            case 'export-player-data':
+                                e.preventDefault();
+                                handleExportData();
                                 break;
                         }
                     }
@@ -1324,6 +1491,22 @@
                     const country = e.target.value;
                     document.getElementById('india-states-group').style.display = (country === 'India') ? 'block' : 'none';
                     document.getElementById('other-region-group').style.display = (country !== 'India' && country !== '') ? 'block' : 'none';
+                });
+                
+                // ★★★ NEW: File Input Listeners ★★★
+                document.getElementById('ga-file-input').addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        appState.fileToUpload.ga = file;
+                        document.getElementById('ga-chat-input').placeholder = `File attached: ${file.name} (Press Send)`;
+                    }
+                });
+                document.getElementById('sa-file-input').addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        appState.fileToUpload.sa = file;
+                        document.getElementById('sa-chat-input').placeholder = `File attached: ${file.name} (Press Send)`;
+                    }
                 });
             }
 
@@ -1347,7 +1530,6 @@
                     loggedInHeader.style.display = 'none';
                 }
             }
-
             function renderHomePageButtons() {
                 const grid = document.getElementById('home-buttons-grid');
                 if (!grid) return;
@@ -1421,14 +1603,21 @@
                 const activeUsers = appState.allUsersCache.filter(u => u.status === 'active');
                 renderPlayerList('ga-player-list', activeUsers);
                 
+                // ★★★ NEW: Listen for pinned message ★★★
+                appState.listeners.pinnedGA = metaCollection.doc('main')
+                    .onSnapshot((doc) => {
+                        const pinnedMsgId = doc.data()?.pinnedMessageGA;
+                        renderPinnedMessage('ga-pinned-message', pinnedMsgId, 'ga');
+                    });
+                
                 appState.listeners.generalMessages = messagesCollection
                     .doc('general')
                     .collection('chats')
                     .orderBy('timestamp', 'asc')
                     .limitToLast(100)
                     .onSnapshot((snapshot) => {
-                        const messages = snapshot.docs.map(doc => doc.data());
-                        renderMessages('ga-chat-box', messages, appState.allUsersCache);
+                        const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        renderMessages('ga-chat-box', messages, appState.allUsersCache, 'ga');
                     }, (error) => {
                         console.error("Error listening to general chat:", error);
                     });
@@ -1438,14 +1627,21 @@
                 const leadership = appState.allUsersCache.filter(u => (u.role === 'Leader' || u.role === 'Co-Leader') && u.status === 'active');
                 renderPlayerList('sa-player-list', leadership);
                 
+                // ★★★ NEW: Listen for pinned message ★★★
+                appState.listeners.pinnedSA = metaCollection.doc('main')
+                    .onSnapshot((doc) => {
+                        const pinnedMsgId = doc.data()?.pinnedMessageSA;
+                        renderPinnedMessage('sa-pinned-message', pinnedMsgId, 'sa');
+                    });
+                
                 appState.listeners.specialMessages = messagesCollection
                     .doc('special')
                     .collection('chats')
                     .orderBy('timestamp', 'asc')
                     .limitToLast(100)
                     .onSnapshot((snapshot) => {
-                        const messages = snapshot.docs.map(doc => doc.data());
-                        renderMessages('sa-chat-box', messages, appState.allUsersCache);
+                        const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        renderMessages('sa-chat-box', messages, appState.allUsersCache, 'sa');
                     }, (error) => {
                         console.error("Error listening to special chat:", error);
                     });
@@ -1509,7 +1705,47 @@
                 container.innerHTML = controlsHTML;
             }
 
-            function renderMessages(boxId, messages, users) {
+            // ★★★ NEW: Render Pinned Message Bar ★★★
+            async function renderPinnedMessage(elementId, messageId, room) {
+                const pinEl = document.getElementById(elementId);
+                if (!pinEl) return;
+                
+                if (!messageId) {
+                    pinEl.style.display = 'none';
+                    return;
+                }
+                
+                try {
+                    const roomName = (room === 'ga' ? 'general' : 'special');
+                    const msgDoc = await messagesCollection.doc(roomName).collection('chats').doc(messageId).get();
+                    if (!msgDoc.exists) {
+                        pinEl.style.display = 'none';
+                        return;
+                    }
+                    
+                    const msg = msgDoc.data();
+                    const user = appState.allUsersCache.find(u => u.id === msg.userId);
+                    let content = msg.text;
+                    if (msg.type === 'image') content = '📷 Image';
+                    if (msg.type === 'video') content = '🎥 Video';
+                    
+                    pinEl.innerHTML = `
+                        <div class="pinned-message-content">
+                            <b>📌 PINNED:</b> ${user ? user.name : '...'} - ${content.substring(0, 50)}...
+                        </div>
+                        ${appState.currentUser.role === 'Leader' ? 
+                            `<button class="btn btn-icon btn-sm" data-action="unpin-message" data-room="${room}">✖</button>` : ''}
+                    `;
+                    pinEl.style.display = 'flex';
+                    
+                } catch (error) {
+                    console.error("Error rendering pinned message:", error);
+                    pinEl.style.display = 'none';
+                }
+            }
+
+            // ★★★ HEAVILY MODIFIED: renderMessages Function ★★★
+            function renderMessages(boxId, messages, users, room) {
                 const box = document.getElementById(boxId);
                 if (!box) return;
 
@@ -1537,21 +1773,46 @@
 
                     const timestamp = msg.timestamp?.toDate ? msg.timestamp.toDate() : new Date();
 
+                    // Check if message is from "me" or "other"
+                    const meOrOther = (msg.userId === appState.currentUser.id) ? 'me' : 'other';
+
+                    // Media Content
+                    let mediaHTML = '';
+                    if (msg.type === 'image') {
+                        mediaHTML = `<div class="message-media"><img src="${msg.url}" alt="Image" onclick="window.open('${msg.url}')"></div>`;
+                    } else if (msg.type === 'video') {
+                        mediaHTML = `<div class="message-media"><video controls src="${msg.url}"></video></div>`;
+                    } else if (msg.type === 'file') {
+                        mediaHTML = `<div class="message-media"><a href="${msg.url}" target="_blank" class="message-media-download">Download File</a></div>`;
+                    }
+                    
+                    // Leader actions
+                    let leaderActions = '';
+                    if (appState.currentUser.role === 'Leader') {
+                        leaderActions = `
+                            <button class_:"btn-icon" data-action="pin-message" data-id="${msg.id}" data-room="${room}" title="Pin">📌</button>
+                            <button class_:"btn-icon" data-action="delete-message" data-id="${msg.id}" data-room="${room}" title="Delete">🗑️</button>
+                        `;
+                    }
+
                     return `
-                        <div class="chat-message ${roleClass}">
+                        <div class="chat-message ${roleClass} ${meOrOther}">
                             ${getAvatar(user)}
                             <div class="message-content">
                                 <div class="message-sender">${user.name} ${user.role === 'Leader' ? '👑' : (user.role === 'Co-Leader' ? '⭐' : '')}</div>
-                                <div class="message-text" style="${style}">
-                                    ${msg.text} 
-                                </div>
+                                ${msg.text ? `<div class="message-text" style="${style}">${msg.text}</div>` : ''}
+                                ${mediaHTML}
                                 <div class="message-timestamp">${timestamp.toLocaleString()}</div>
+                            </div>
+                            <div class="message-actions">
+                                ${leaderActions}
                             </div>
                         </div>
                     `;
                 }).join('');
                 box.scrollTop = box.scrollHeight;
             }
+            
             function renderNoticeBoard() {
                 const listEl = document.getElementById('notice-list');
                 const formEl = document.getElementById('notice-board-post-form');
@@ -1686,6 +1947,7 @@
                                 <td>
                                     <button class="btn btn-primary btn-sm" data-action="show-player-details" data-id="${user.id}">Details</button>
                                     ${user.role !== 'Leader' ? `
+                                        <button class="btn btn-secondary btn-sm" data-action="player-action" data-task="suspend" data-id="${user.id}">Suspend</button>
                                         <button class="btn btn-warning btn-sm" data-action="player-action" data-task="ban" data-id="${user.id}">Ban</button>
                                         <button class="btn btn-danger btn-sm" data-action="player-action" data-task="delete" data-id="${user.id}">Delete</button>
                                     ` : ''}
@@ -1737,13 +1999,17 @@
                     const gaMsgs = await messagesCollection.doc('general').collection('chats').where('userId', '==', userId).limit(20).get();
                     gaMsgs.docs.forEach(m => {
                         const data = m.data();
-                        activity.push({ time: data.timestamp.toDate(), text: `[General] ${data.text}` });
+                        let content = data.text;
+                        if(data.type) content = `[${data.type}]`;
+                        activity.push({ time: data.timestamp.toDate(), text: `[General] ${content}` });
                     });
                     
                     const saMsgs = await messagesCollection.doc('special').collection('chats').where('userId', '==', userId).limit(20).get();
                     saMsgs.docs.forEach(m => {
                         const data = m.data();
-                        activity.push({ time: data.timestamp.toDate(), text: `[Special] ${data.text}` });
+                        let content = data.text;
+                        if(data.type) content = `[${data.type}]`;
+                        activity.push({ time: data.timestamp.toDate(), text: `[Special] ${content}` });
                     });
 
                     const dms = await dmsCollection.where('userId', '==', userId).limit(20).get();
@@ -1903,13 +2169,10 @@
                     optionsEl.innerHTML = '<p>Error loading cabinet options.</p>';
                 }
             }
-            /**
-             * यह फंक्शन बैकग्राउंड में ड्राफ्ट्स की स्थिति को अपडेट करता है
-             */
+            
             async function updateAllDraftsStatus() {
                 const now = new Date();
                 
-                // 1. उन सभी ड्राफ्ट्स को खोजें जो 'advice' या 'voting' में हैं
                 const draftsToUpdateQuery = draftsCollection
                     .where('status', 'in', ['advice', 'voting']);
                 
@@ -1919,25 +2182,21 @@
                         return; // कोई काम नहीं है
                     }
 
-                    // सभी अपडेट्स को एक साथ भेजने के लिए "batch" का उपयोग करें
                     const batch = db.batch();
                     
                     snapshot.docs.forEach(doc => {
                         const draft = { id: doc.id, ...doc.data() };
                         const draftRef = draftsCollection.doc(draft.id);
 
-                        // Firestore Timestamps को JS Dates में बदलें
                         const adviceEnds = draft.adviceEndsAt.toDate();
                         const votingEnds = draft.votingEndsAt.toDate();
 
                         if (draft.status === 'advice' && now > adviceEnds) {
-                            // Advice फेज खत्म, Voting शुरू
                             batch.update(draftRef, { status: 'voting' });
                         }
                         
                         else if (draft.status === 'voting' && now > votingEnds) {
-                            // Voting फेज खत्म, वोटों की गिनती करें
-                            const { newStatus, newSummary } = tallyVotes(draft); // वोटों की गिनती करें
+                            const { newStatus, newSummary } = tallyVotes(draft); 
                             batch.update(draftRef, { 
                                 status: newStatus, 
                                 resultSummary: newSummary 
@@ -1945,7 +2204,6 @@
                         }
                     });
 
-                    // सभी बदलावों को डेटाबेस में भेजें
                     await batch.commit();
 
                 } catch (error) {
@@ -1953,11 +2211,7 @@
                 }
             }
             
-            /**
-             * यह फंक्शन सिर्फ वोटों की गिनती करता है, DB को बदलता नहीं है
-             */
             function tallyVotes(draft) {
-                // गिनती हो चुकी है या ड्राफ्ट नहीं है तो वापस जाएँ
                 if (!draft || !['voting', 'advice'].includes(draft.status)) {
                     return { newStatus: draft.status, newSummary: draft.resultSummary }; 
                 }
@@ -1973,14 +2227,12 @@
 
                 const totalPossibleWeightedVotes = activeUsers.reduce((acc, user) => acc + (user.role === 'Leader' ? 3 : 1), 0);
                 
-                // दिए गए वोटों की गिनती
                 (draft.votes || []).forEach(v => {
                     if (v.vote === 'yes') yesVotes += v.weight;
                     if (v.vote === 'no') noVotes += v.weight;
                     if (v.vote === 'absent') absentVotes += v.weight;
                 });
 
-                // जो यूज़र्स वोट नहीं दिए, उन्हें 'absent' मानें
                 const votedUserIds = (draft.votes || []).map(v => v.userId);
                 activeUsers.forEach(user => {
                     if (!votedUserIds.includes(user.id)) {
@@ -2215,7 +2467,6 @@
                 const playerId = document.getElementById('reg-player-id').value;
                 
                 try {
-                    // जांचें कि यूज़र आईडी पहले से मौजूद है या नहीं
                     const userDoc = await usersCollection.doc(playerId).get();
                     if (userDoc.exists) {
                         alert('Error: This Player ID is already taken. Please choose another one.');
@@ -2257,10 +2508,8 @@
                         createdAt: firebase.firestore.FieldValue.serverTimestamp() // सर्वर टाइम
                     };
 
-                    // नए यूज़र को 'users' collection में सेव करें
                     await usersCollection.doc(newUser.id).set(newUser);
                     
-                    // लीडर के लिए 'newRegistrations' में एंट्री करें
                     const newRegData = {
                         id: newUser.id,
                         name: newUser.name,
@@ -2301,28 +2550,28 @@
                     if (!metaDoc.exists) return;
                     const newRegistrations = metaDoc.data()?.newRegistrations || [];
                     
-                    // उस रजिस्ट्रेशन को लिस्ट से हटा दें
                     const updatedRegistrations = newRegistrations.filter(reg => reg.id !== userId);
 
                     await metaCollection.doc('main').update({
                         newRegistrations: updatedRegistrations
                     });
-                    // UI अपने आप real-time listener से अपडेट हो जाएगा
 
                 } catch (error) {
                     console.error("Error acknowledging registration:", error);
                 }
             }
-
+            
+            // ★★★ MODIFIED: handleChatMessagePost for file upload ★★★
             async function handleChatMessagePost(e, pagePrefix) {
                 e.preventDefault();
                 const input = document.getElementById(`${pagePrefix}-chat-input`);
                 const text = input.value.trim();
-                if (!text) return;
+                const file = appState.fileToUpload[pagePrefix];
+                
+                if (!text && !file) return; // Don't send empty messages
 
                 const user = appState.currentUser;
                 
-                // SA में पोस्टिंग के लिए पर्मिशन जांचें
                 if (pagePrefix === 'sa' && !['Leader', 'Co-Leader'].includes(user.role)) {
                     document.getElementById('sa-post-error').style.display = 'block';
                     return;
@@ -2347,19 +2596,70 @@
                     text: text,
                     color: color,
                     font: font,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp() // सर्वर टाइम
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    type: 'text',
+                    url: null,
                 };
+                
+                // Clear inputs
+                input.value = '';
+                appState.fileToUpload[pagePrefix] = null;
+                document.getElementById(`${pagePrefix}-file-input`).value = null;
+                input.placeholder = 'Type your message...';
+
 
                 try {
-                    // सही चैट रूम के 'chats' सब-कलेक्शन में मैसेज जोड़ें
-                    const chatDocRef = messagesCollection.doc(pagePrefix === 'ga' ? 'general' : 'special');
-                    await chatDocRef.collection('chats').add(message);
-                    
-                    input.value = '';
-                    // UI अपने आप real-time listener से अपडेट हो जाएगा
-
+                    // Handle file upload first
+                    if (file) {
+                        const fileType = file.type.split('/')[0]; // 'image', 'video'
+                        const filePath = `chat/${pagePrefix}/${Date.now()}_${file.name}`;
+                        const fileRef = storage.ref(filePath);
+                        
+                        // Show uploading status
+                        input.placeholder = 'Uploading file...';
+                        
+                        const uploadTask = fileRef.put(file);
+                        
+                        uploadTask.on('state_changed', 
+                            (snapshot) => {
+                                // Progress
+                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                                input.placeholder = `Uploading... ${Math.round(progress)}%`;
+                            }, 
+                            (error) => {
+                                // Error
+                                console.error("Upload failed:", error);
+                                alert("File upload failed.");
+                                input.placeholder = 'Type your message...';
+                            }, 
+                            async () => {
+                                // Success
+                                const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+                                message.url = downloadURL;
+                                if (fileType === 'image') message.type = 'image';
+                                else if (fileType === 'video') message.type = 'video';
+                                else message.type = 'file';
+                                
+                                // Now add the message to Firestore
+                                await addMessageToDb(pagePrefix, message);
+                                input.placeholder = 'Type your message...';
+                            }
+                        );
+                    } else {
+                        // Just send text message
+                        await addMessageToDb(pagePrefix, message);
+                    }
                 } catch (error) {
                     console.error("Error sending message:", error);
+                }
+            }
+
+            async function addMessageToDb(pagePrefix, message) {
+                try {
+                    const chatDocRef = messagesCollection.doc(pagePrefix === 'ga' ? 'general' : 'special');
+                    await chatDocRef.collection('chats').add(message);
+                } catch (error) {
+                    console.error("Error adding message to DB:", error);
                 }
             }
 
@@ -2377,7 +2677,6 @@
                     });
                     
                     document.getElementById('new-notice-form').reset();
-                    // UI अपने आप real-time listener से अपडेट हो जाएगा
                 } catch (error) {
                     console.error("Error posting notice:", error);
                 }
@@ -2389,10 +2688,9 @@
                 const message = document.getElementById('leader-chat-message').value;
 
                 try {
-                    // एक नया DM डॉक्यूमेंट बनाएँ और उसकी ID को threadId के रूप में इस्तेमाल करें
                     const newDMRef = dmsCollection.doc();
                     await newDMRef.set({
-                        id: newDMRef.id, // ID को डॉक्यूमेंट में ही सेव करें
+                        id: newDMRef.id, 
                         threadId: newDMRef.id, 
                         userId: appState.currentUser.id,
                         subject: subject,
@@ -2414,7 +2712,6 @@
                 if (!message) return;
                 
                 try {
-                    // ओरिजिनल DM को ढूँढें ताकि threadId मिल सके
                     const originalDM = await dmsCollection.doc(dmId).get();
                     if (!originalDM.exists) {
                         alert("Error: Could not find original message.");
@@ -2431,8 +2728,6 @@
                         isReply: true
                     });
                     
-                    // UI अपने आप real-time listener से अपडेट हो जाएगा
-
                 } catch (error) {
                     console.error("Error replying to DM:", error);
                 }
@@ -2465,7 +2760,6 @@
                     await adviceCollection.doc(adviceId).update({
                         status: status
                     });
-                    // UI अपने आप real-time listener से अपडेट हो जाएगा
                 } catch (error) {
                     console.error("Error marking advice:", error);
                 }
@@ -2476,7 +2770,7 @@
                 const title = document.getElementById('draft-title').value;
                 const description = document.getElementById('draft-description').value;
                 
-                const now = new Date(); // अभी का समय
+                const now = new Date(); 
                 const fiveHours = 5 * 60 * 60 * 1000;
                 const eightHours = 8 * 60 * 60 * 1000;
                 
@@ -2489,7 +2783,7 @@
                         description: description,
                         status: 'advice',
                         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        adviceEndsAt: adviceEnds, // JS Date ऑब्जेक्ट को Firestore अपने आप Timestamp में बदल देगा
+                        adviceEndsAt: adviceEnds, 
                         votingEndsAt: votingEnds,
                         advice: [],
                         votes: [],
@@ -2513,7 +2807,7 @@
                 const newAdvice = {
                     userId: appState.currentUser.id,
                     text: text,
-                    timestamp: new Date() // JS Date ऑब्जेक्ट
+                    timestamp: new Date() 
                 };
                 
                 try {
@@ -2522,7 +2816,6 @@
                     });
                     
                     document.getElementById('draft-advice-form').reset();
-                    // UI अपने आप real-time listener से अपडेट हो जाएगा
                 } catch (error) {
                     console.error("Error submitting draft advice:", error);
                 }
@@ -2553,7 +2846,6 @@
                         votes: firebase.firestore.FieldValue.arrayUnion(newVote)
                     });
                     
-                    // UI अपने आप real-time listener से अपडेट हो जाएगा
                 } catch (error) {
                     console.error("Error casting vote:", error);
                 }
@@ -2569,17 +2861,14 @@
                     
                     if (draft.status !== 'passed_pending_activation') return;
 
-                    // 1. ड्राफ्ट की स्थिति को 'active' में बदलें
                     await draftRef.update({ status: 'active' });
 
-                    // 2. इसे 'rules' collection में जोड़ें
                     await rulesCollection.add({
                         title: draft.title,
                         description: draft.description,
                         activatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     
-                    // 3. नोटिस बोर्ड पर पोस्ट करें
                     await noticesCollection.add({
                         userId: appState.currentUser.id, 
                         title: `New Rule Activated: ${draft.title}`,
@@ -2588,7 +2877,6 @@
                     });
                     
                     alert('Law has been activated and added to the Rules of Clan. A notice has been posted.');
-                    // UI अपने आप real-time listener से अपडेट हो जाएगा
                 } catch (error) {
                     console.error("Error activating law:", error);
                 }
@@ -2601,12 +2889,12 @@
                 
                 try {
                     await rulesCollection.doc(ruleId).delete();
-                    // UI अपने आप real-time listener से अपडेट हो जाएगा
                 } catch (error) {
                     console.error("Error removing rule:", error);
                 }
             }
-
+            
+            // ★★★ MODIFIED: Player Actions (Suspend added) ★★★
             async function handlePlayerAction(userId, task, value = null) {
                 const userRef = usersCollection.doc(userId);
                 
@@ -2621,8 +2909,13 @@
                             await userRef.update({ role: value });
                             alert(`User ${user.name} role changed to ${value}.`);
                             break;
+                        case 'suspend':
+                            if (confirm(`Are you sure you want to suspend ${user.name}? This is temporary.`)) {
+                                await userRef.update({ status: 'suspended' });
+                            }
+                            break;
                         case 'ban':
-                            if (confirm(`Are you sure you want to ban ${user.name}?`)) {
+                            if (confirm(`Are you sure you want to ban ${user.name}? This is permanent.`)) {
                                 await userRef.update({ status: 'banned' });
                             }
                             break;
@@ -2659,9 +2952,9 @@
                 }
                 
                 try {
-                    await metaCollection.doc('main').set({ // .set का उपयोग करें ताकि यह बन भी जाए अगर मौजूद न हो
+                    await metaCollection.doc('main').set({ 
                         cabinet: selected
-                    }, { merge: true }); // merge: true मतलब यह newRegistrations को नहीं हटाएगा
+                    }, { merge: true }); 
                     
                     alert('Cabinet players updated.');
                     showPage('leader-dashboard-page');
@@ -2669,6 +2962,76 @@
                     console.error("Error saving cabinet:", error);
                 }
             }
+            
+            // ★★★ NEW: Chat Action Handlers (Pin, Delete) ★★★
+            async function handlePinMessage(messageId, room) {
+                if (appState.currentUser.role !== 'Leader') return;
+                
+                const fieldToUpdate = (room === 'ga') ? 'pinnedMessageGA' : 'pinnedMessageSA';
+                
+                try {
+                    await metaCollection.doc('main').update({
+                        [fieldToUpdate]: messageId 
+                    });
+                } catch (error) {
+                    console.error("Error pinning message:", error);
+                }
+            }
+            
+            async function handleDeleteMessage(messageId, room) {
+                if (appState.currentUser.role !== 'Leader') return;
+                
+                if (!confirm('Are you sure you want to delete this message forever?')) return;
+                
+                const roomName = (room === 'ga' ? 'general' : 'special');
+                const msgRef = messagesCollection.doc(roomName).collection('chats').doc(messageId);
+
+                try {
+                    // Check if message has a file
+                    const msgDoc = await msgRef.get();
+                    if(msgDoc.exists && msgDoc.data().url) {
+                        // Delete file from Storage
+                        const fileRef = storage.refFromURL(msgDoc.data().url);
+                        await fileRef.delete();
+                    }
+                    
+                    // Delete message from Firestore
+                    await msgRef.delete();
+                    
+                } catch (error) {
+                    console.error("Error deleting message (and file):", error);
+                }
+            }
+            
+            // ★★★ NEW: Export Player Data Function ★★★
+            async function handleExportData() {
+                if (appState.currentUser.role !== 'Leader') return;
+
+                try {
+                    // We already have all users in the cache
+                    const allData = {
+                        exportedAt: new Date().toISOString(),
+                        users: appState.allUsersCache
+                    };
+                    
+                    const dataStr = JSON.stringify(allData, null, 2);
+                    const blob = new Blob([dataStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `clan_portal_export_${Date.now()}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                } catch (error) {
+                    console.error("Error exporting data:", error);
+                    alert("Error exporting data.");
+                }
+            }
+
 
             // --- 13. Start the App ---
             initApp();
