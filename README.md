@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clan Management Portal (Online)</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
     
     <style>
-        /* --- 1. Global Styles & Theme --- */
+              /* --- 1. Global Styles & Theme --- */
         :root {
             --color-primary: #007bff;
             --color-primary-dark: #0056b3;
@@ -22,7 +23,11 @@
             --color-text: #333;
             --color-leader: #ffd700; /* Gold */
             --color-coleader: #c0c0c0; /* Silver */
-            --color-me-message-bg: #dcf8c6; /* WhatsApp "me" green */
+            --color-danger: #dc3545;
+            --color-success: #28a745;
+            --color-warning: #ffc107;
+            --color-me-message-bg: #dcf8c6;
+            --color-other-message-bg: #f1f1f1;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             --radius: 8px;
         }
@@ -41,7 +46,7 @@
         }
 
         #app {
-            max-width: 1400px;
+            max-width: 100%; /* Full width */
             margin: 0 auto;
             display: flex;
             flex-direction: column;
@@ -51,16 +56,18 @@
         .container {
             width: 100%;
             padding: 20px;
+            flex: 1; /* Make main container grow */
         }
 
         .page {
             display: none; /* Hidden by default */
             flex-direction: column;
-            animation: fadeIn 0.3s ease-in-out;
         }
 
         .page.active {
             display: flex;
+            /* Point 1: Page Transition */
+            animation: fadeIn 0.3s ease-in-out;
         }
 
         @keyframes fadeIn {
@@ -68,11 +75,11 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- 2. Header & Navigation --- */
+        /* --- 2. Header & Navigation (Redesigned for Point 5) --- */
         #header-bar {
             background-color: var(--color-white);
             box-shadow: var(--shadow);
-            padding: 15px 20px;
+            padding: 10px 20px;
             position: sticky;
             top: 0;
             z-index: 100;
@@ -92,10 +99,18 @@
             align-items: center;
         }
 
+        /* Point 5: Profile Info (Left Side) */
         .profile-info {
             display: flex;
             align-items: center;
             gap: 12px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: var(--radius);
+            transition: background-color 0.2s ease;
+        }
+        .profile-info:hover {
+            background-color: var(--color-light-gray);
         }
 
         .profile-avatar {
@@ -112,23 +127,108 @@
             text-transform: uppercase;
             border: 2px solid var(--color-white);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            object-fit: cover; /* For profile pictures */
         }
 
-        .profile-name-role span {
+        .profile-details span {
             display: block;
         }
-
         .profile-name {
             font-weight: 600;
             font-size: 1.1rem;
         }
-
-        .profile-role {
-            font-size: 0.9rem;
+        .profile-meta {
+            font-size: 0.85rem;
             color: var(--color-dark-gray);
+        }
+        .profile-role {
             text-transform: capitalize;
+            font-weight: 500;
+        }
+        .profile-id {
+            color: var(--color-primary);
         }
 
+        /* Point 5: 3D Earth (Center) */
+        .header-3d-scene {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 800px; /* Enable 3D space */
+            min-width: 150px;
+        }
+        .earth-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            transform-style: preserve-3d;
+            animation: spin-scene 20s linear infinite;
+        }
+        .earth-globe {
+            width: 50px;
+            height: 50px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-top: -25px;
+            margin-left: -25px;
+            transform-style: preserve-3d;
+            animation: spin-globe 10s linear infinite;
+        }
+        .earth-surface {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: url('https://i.imgur.com/pVYf2rN.jpeg'); /* Simple earth texture */
+            background-size: cover;
+            box-shadow: 0 0 20px rgba(0,123,255,0.5), inset 0 0 10px rgba(0,0,0,0.3);
+            transform: rotateY(0deg);
+        }
+        .orbit {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: var(--orbit-radius, 60px);
+            height: var(--orbit-radius, 60px);
+            border: 1px dashed rgba(0,123,255,0.3);
+            border-radius: 50%;
+            transform-style: preserve-3d;
+            animation: var(--anim-duration, 10s) linear infinite spin-orbit;
+            transform: translate(-50%, -50%) rotateX(70deg);
+        }
+        .orbit-object {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 20px;
+            height: 20px;
+            margin-top: -10px;
+            margin-left: -10px;
+            font-size: 1.2rem;
+            animation: var(--anim-duration, 10s) linear infinite counter-spin;
+            transform-style: preserve-3d;
+        }
+
+        @keyframes spin-scene {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(360deg); }
+        }
+        @keyframes spin-globe {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(360deg); }
+        }
+        @keyframes spin-orbit {
+            from { transform: translate(-50%, -50%) rotateX(70deg) rotateZ(0deg); }
+            to { transform: translate(-50%, -50%) rotateX(70deg) rotateZ(360deg); }
+        }
+        @keyframes counter-spin {
+            from { transform: rotateX(-70deg) rotateZ(0deg) ; }
+            to { transform: rotateX(-70deg) rotateZ(-360deg) ; }
+        }
+
+
+        /* Point 5: Header Nav (Right Side) */
         .header-nav .btn {
             margin-left: 10px;
         }
@@ -147,57 +247,33 @@
             display: inline-block;
             text-align: center;
         }
-
+        .btn-large {
+            padding: 15px 30px;
+            font-size: 1.1rem;
+        }
         .btn-primary {
             background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
             color: var(--color-white);
         }
-
         .btn-primary:hover {
             opacity: 0.9;
             box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
         }
-
-        .btn-secondary {
-            background-color: #6c757d;
-            color: var(--color-white);
-        }
-
-        .btn-danger {
-            background-color: #dc3545;
-            color: var(--color-white);
-        }
-
-        .btn-success {
-            background-color: #28a745;
-            color: var(--color-white);
-        }
-
-        .btn-warning {
-            background-color: #ffc107;
-            color: var(--color-text);
-        }
-
-        .btn-icon {
-            padding: 8px 10px;
-            font-size: 1.1rem;
-        }
-        
-        .btn-sm {
-            padding: 3px 6px;
-            font-size: 0.75rem;
-        }
+        .btn-secondary { background-color: #6c757d; color: var(--color-white); }
+        .btn-danger { background-color: var(--color-danger); color: var(--color-white); }
+        .btn-success { background-color: var(--color-success); color: var(--color-white); }
+        .btn-warning { background-color: var(--color-warning); color: var(--color-text); }
+        .btn-icon { padding: 8px 10px; font-size: 1.1rem; }
+        .btn-sm { padding: 3px 6px; font-size: 0.75rem; }
 
         .form-group {
             margin-bottom: 15px;
         }
-
         .form-group label {
             display: block;
             margin-bottom: 5px;
             font-weight: 600;
         }
-
         .form-control {
             width: 100%;
             padding: 12px;
@@ -205,15 +281,20 @@
             border-radius: var(--radius);
             font-family: 'Roboto', sans-serif;
             font-size: 1rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.15);
         }
         
         select.form-control[multiple] {
             height: auto;
             padding: 10px;
         }
-
         textarea.form-control {
-            min-height: 120px;
+            min-height: 100px;
             resize: vertical;
         }
 
@@ -224,7 +305,6 @@
             padding: 25px;
             margin-bottom: 20px;
         }
-
         .card-title {
             font-size: 1.5rem;
             font-weight: 700;
@@ -243,18 +323,78 @@
         .alert-danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .alert-info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .alert-warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
 
         /* --- 4. Page-Specific Styles --- */
 
-        /* Login & Register */
-        #login-page, #register-page {
+        /* Point 2: Login Page Redesign */
+        #login-page {
             justify-content: center;
-            padding-top: 40px;
+            align-items: center;
+            text-align: center;
+        }
+        .login-welcome-container {
+            max-width: 900px;
+            width: 100%;
+        }
+        .login-main-title {
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 3rem;
+            color: var(--color-primary-dark);
+            margin-bottom: 20px;
+            /* Point 2: Text shadow glow animation */
+            animation: text-glow 2.5s ease-in-out infinite alternate;
+        }
+        @keyframes text-glow {
+            from { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px var(--color-primary); }
+            to { text-shadow: 0 0 10px #fff, 0 0 20px var(--color-primary), 0 0 30px var(--color-primary); }
+        }
+
+        .login-profiles-row {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        .login-profile-box {
+            background: var(--color-white);
+            box-shadow: var(--shadow);
+            border-radius: var(--radius);
+            padding: 20px;
+            width: 300px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .login-profile-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+        .login-profile-box h3 {
+            color: var(--color-primary);
+            margin-bottom: 15px;
+        }
+        .profile-placeholder-img {
+            width: 100px;
+            height: 100px;
+            background: var(--color-light-gray);
+            border: 2px dashed var(--color-medium-gray);
+            border-radius: 50%;
+            margin: 0 auto 15px auto;
+        }
+        .login-welcome-note {
+            font-size: 1.2rem;
+            color: var(--color-dark-gray);
+            margin-bottom: 30px;
+        }
+        .login-button-group {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
         }
         .form-container {
             max-width: 500px;
             width: 100%;
             margin: 0 auto;
+            text-align: left;
         }
         .form-container .card-title {
             text-align: center;
@@ -269,49 +409,210 @@
             cursor: pointer;
         }
 
-        /* Home Page */
-        .home-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
+        /* Point 2: Post-Login Page */
+        #post-login-page {
+            justify-content: center;
+            padding-top: 40px;
         }
-
-        .home-button {
-            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-            color: var(--color-white);
-            padding: 20px;
-            border-radius: var(--radius);
-            text-align: center;
-            font-size: 1.2rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.1);
-        }
-        .home-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 12px rgba(0, 123, 255, 0.2);
-        }
-        .home-button.leader-btn {
-            background: linear-gradient(135deg, #ffc107, #e0a800);
-            color: #333;
-        }
-        .cabinet-list {
+        .post-login-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
             margin-top: 30px;
         }
-        .cabinet-list h3 {
-            margin-bottom: 10px;
+
+        /* Point 3: Register Page Redesign */
+        #register-page {
+            justify-content: center;
+            padding-top: 20px;
         }
-        .cabinet-list span {
+        .reg-section {
+            background: #fdfdfd;
+            border: 1px solid var(--color-light-gray);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            animation: fadeIn 0.5s ease-out; /* Fade in sections */
+        }
+        .reg-section h3 {
+            font-size: 1.2rem;
+            color: var(--color-primary);
+            border-bottom: 1px solid var(--color-medium-gray);
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+        }
+        .reg-success-details {
+            background: var(--color-light-gray);
+            padding: 15px;
+            border-radius: var(--radius);
+            margin: 20px 0;
+            text-align: left;
             display: inline-block;
-            background-color: #e9ecef;
-            padding: 5px 10px;
-            border-radius: 5px;
-            margin-right: 5px;
-            font-weight: 500;
+        }
+        .reg-success-details p {
+            font-size: 1.1rem;
         }
 
-        /* Assembly (Chat) */
+        /* Point 4: Profile Page */
+        #profile-page {
+            justify-content: center;
+            padding-top: 20px;
+        }
+        .profile-pic-area {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .profile-pic-large {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid var(--color-white);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+            background-color: var(--color-light-gray);
+        }
+        .profile-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--color-light-gray);
+        }
+        .profile-section h3 {
+            font-size: 1.2rem;
+            color: var(--color-primary-dark);
+            margin-bottom: 15px;
+        }
+        
+        /* Point 6: Central Page (Replaces Home) */
+        .central-feed-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .central-widget {
+            background: var(--color-white);
+            box-shadow: var(--shadow);
+            border-radius: var(--radius);
+            padding: 20px;
+            transition: all 0.2s ease;
+            position: relative; /* For notification badge */
+            cursor: pointer;
+            /* Point 6: CSS Grid Order default */
+            order: 5; 
+        }
+        .central-widget:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+        .central-widget h3 {
+            color: var(--color-primary-dark);
+            margin-bottom: 10px;
+        }
+        .central-widget p {
+            color: var(--color-dark-gray);
+        }
+
+        /* Point 6: Widget Specifics & Ordering */
+        .widget-clan-info {
+            grid-column: 1 / -1; /* Span full width */
+            order: 1;
+            cursor: default;
+        }
+        .widget-clan-info:hover { transform: none; box-shadow: var(--shadow); }
+        .clan-info-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        .clan-info-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: var(--radius);
+            background-color: var(--color-light-gray);
+        }
+        #central-clan-name {
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 2rem;
+            color: #333;
+        }
+        #central-clan-id { font-size: 1.1rem; color: var(--color-dark-gray); }
+        .clan-info-leader { font-size: 1.1rem; font-weight: 600; }
+        .clan-info-time {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--color-primary);
+            margin-top: 10px;
+        }
+
+        /* Point 6: Dynamic Draft Ordering */
+        .widget-drafts {
+            order: 2; /* Default order */
+            border: 2px solid transparent;
+        }
+        .widget-drafts.active-draft {
+            /* This class will be added by JS */
+            order: 2; /* Move to top */
+            background-color: #fff8e1;
+            border: 2px solid var(--color-warning);
+            animation: pulse-glow 1.5s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            from { box-shadow: 0 0 5px var(--color-warning); }
+            to { box-shadow: 0 0 20px var(--color-warning); }
+        }
+        .widget-status {
+            font-weight: 600;
+            color: var(--color-success);
+        }
+
+        .widget-players { order: 3; }
+        .widget-parliament { order: 4; }
+        .widget-notice { order: 5; }
+        .widget-rules { order: 6; }
+        .widget-dm { order: 7; }
+        .widget-advice { order: 8; }
+        .widget-dashboard { order: 9; }
+        .widget-roster { order: 10; grid-column: 1 / -1; cursor: default; }
+        .widget-roster:hover { transform: none; box-shadow: var(--shadow); }
+
+        #central-top-players-list div {
+            padding: 5px 0;
+            font-weight: 500;
+            border-bottom: 1px solid var(--color-light-gray);
+        }
+        #central-top-players-list div:last-child { border-bottom: none; }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--color-danger);
+            color: white;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #central-roster-lists h4 {
+            font-size: 1rem;
+            color: var(--color-primary);
+            margin-top: 10px;
+        }
+        #central-roster-lists div {
+            font-size: 0.9rem;
+            padding: 5px;
+            background: var(--color-light-gray);
+            border-radius: 4px;
+        }
+
+
+        /* Point 7: Assembly (Chat) */
         .assembly-layout {
             display: flex;
             gap: 20px;
@@ -332,9 +633,7 @@
             padding: 8px;
             border-bottom: 1px solid var(--color-light-gray);
         }
-        .player-list-item:last-child {
-            border-bottom: none;
-        }
+        .player-list-item:last-child { border-bottom: none; }
         .player-list-item .avatar {
             width: 30px;
             height: 30px;
@@ -352,7 +651,6 @@
             overflow: hidden;
         }
         
-        /* ★★★ NEW: Pinned Message ★★★ */
         .pinned-message {
             padding: 10px 15px;
             background-color: #fff8e1;
@@ -375,17 +673,19 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
+            gap: 1px; /* Subtle gap */
         }
         
-        /* ★★★ NEW: Chat Message Actions (Pin/Delete) ★★★ */
+        /* Point 7: Chat Message Actions (Pin/Delete/Reply) */
         .message-actions {
-            display: none; /* Hide by default */
+            display: none;
             margin-left: 10px;
             margin-right: 10px;
             align-self: center;
         }
         .chat-message:hover .message-actions {
-            display: block; /* Show on hover */
+            display: flex;
+            gap: 5px;
         }
         .message-actions .btn-icon {
             padding: 2px 5px;
@@ -398,10 +698,13 @@
         .message-actions .btn-icon:hover {
             color: var(--color-primary);
         }
+        .message-actions .btn-icon-reply {
+            font-size: 1rem;
+        }
 
         .chat-message {
             max-width: 80%;
-            margin-bottom: 15px;
+            margin-bottom: 10px; /* Reduced margin */
             display: flex;
             gap: 10px;
         }
@@ -414,9 +717,10 @@
         .message-content {
             border-radius: var(--radius);
             padding: 10px 15px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         
-        /* ★★★ NEW: "Me" (Right) vs "Other" (Left) styles ★★★ */
+        /* Point 7: "Me" (Right) vs "Other" (Left) styles */
         .chat-message.other {
             flex-direction: row; /* Default */
             align-self: flex-start;
@@ -429,14 +733,61 @@
             background-color: var(--color-me-message-bg);
         }
         .chat-message.other .message-content {
-            background-color: var(--color-light-gray);
+            background-color: var(--color-other-message-bg);
         }
         
+        /* Point 7: Reply/Quote Styling */
+        .message-reply {
+            background: rgba(0,0,0,0.05);
+            border-left: 3px solid var(--color-primary);
+            padding: 5px 8px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+        .message-reply-user {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--color-primary-dark);
+        }
+        .message-reply-text {
+            font-size: 0.9rem;
+            color: var(--color-dark-gray);
+            font-style: italic;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .reply-preview {
+            padding: 10px 20px;
+            background: #fafafa;
+            border-top: 1px solid var(--color-light-gray);
+            font-size: 0.9rem;
+            position: relative;
+        }
+        .reply-preview p {
+            margin: 0;
+            color: var(--color-dark-gray);
+        }
+        .reply-preview-close {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            padding: 5px;
+        }
+
+
         .message-sender {
             font-weight: 600;
             font-size: 0.9rem;
             margin-bottom: 5px;
         }
+        /* Point 7: Role Icons */
+        .message-sender .role-icon {
+            margin-left: 5px;
+        }
+
         .message-text {
             word-wrap: break-word;
         }
@@ -446,7 +797,6 @@
             margin-top: 5px;
         }
         
-        /* ★★★ NEW: Media (Image/Video) in chat ★★★ */
         .message-media {
             margin-top: 10px;
         }
@@ -489,10 +839,9 @@
         .chat-message.me.message-leader .message-content,
         .chat-message.me.message-coleader .message-content {
              background-color: var(--color-me-message-bg); /* Keep "me" green */
+             border: none;
         }
 
-
-        /* --- ★★★ MODIFIED CHAT CONTROLS ★★★ --- */
         .chat-controls-container {
             padding: 10px 20px 0 20px;
             background-color: #fdfdfd;
@@ -522,7 +871,6 @@
             cursor: pointer;
         }
 
-        /* ★★★ NEW: File Input Wrapper ★★★ */
         .file-input-wrapper {
             position: relative;
             overflow: hidden;
@@ -560,7 +908,25 @@
             border-bottom-left-radius: 0;
         }
 
-        /* Rules, Notices, Drafts */
+        /* Point 8: Secretariat Page */
+        .secretariat-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 160px);
+        }
+        .secretariat-main {
+            overflow-y: auto;
+        }
+        .secretariat-chat .chat-main {
+            height: 100%;
+            box-shadow: none;
+        }
+        .secretariat-chat .chat-box {
+            height: calc(100% - 130px); /* Adjust based on title/form */
+        }
+
+        /* Point 9: Rules, Notices */
         .item-list .item-card {
             background-color: var(--color-white);
             border-radius: var(--radius);
@@ -588,8 +954,59 @@
             top: 15px;
             right: 15px;
         }
+        
+        /* Point 9: Notice Board Reactions/Advice */
+        .notice-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--color-light-gray);
+        }
+        .reaction-btn {
+            background: var(--color-light-gray);
+            border: 1px solid var(--color-medium-gray);
+            padding: 5px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .reaction-btn:hover {
+            background: var(--color-medium-gray);
+        }
+        .reaction-btn.reacted {
+            background: var(--color-primary);
+            color: var(--color-white);
+            border-color: var(--color-primary-dark);
+        }
+        .notice-advice-form {
+            margin-top: 15px;
+        }
 
-        /* Draft Detail Page */
+        /* Point 9: Rules Page Parchment */
+        .rules-container {
+            background: #fdfbf7; /* Parchment color */
+            border: 20px solid #d2b48c; /* Wood frame */
+            box-shadow: 0 0 15px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.2);
+            padding: 30px;
+            border-radius: 5px;
+        }
+        .rules-container .card-title {
+            text-align: center;
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 2rem;
+        }
+        .rules-container .item-card {
+            background: transparent;
+            box-shadow: none;
+            border-bottom: 1px dashed #c0a070;
+            border-radius: 0;
+        }
+        .rules-container .item-card:last-child { border-bottom: none; }
+        
+
+        /* Point 10: Draft Detail Page */
         .draft-status-bar {
             padding: 15px;
             border-radius: var(--radius);
@@ -600,10 +1017,11 @@
         }
         .status-advice { background-color: #fff3cd; color: #856404; }
         .status-voting { background-color: #d1ecf1; color: #0c5460; }
+        .status-results { background-color: #cce5ff; color: #004085; } /* New */
         .status-passed { background-color: #d4edda; color: #155724; }
         .status-failed { background-color: #f8d7da; color: #721c24; }
         .status-canceled { background-color: #e2e3e5; color: #383d41; }
-        .status-active { background-color: #cce5ff; color: #004085; }
+        .status-active { background-color: #d4edda; color: #155724; } /* Same as passed */
 
         .vote-options {
             display: flex;
@@ -624,6 +1042,7 @@
             padding: 15px;
             border-radius: var(--radius);
             font-weight: 500;
+            white-space: pre-wrap; /* Show newlines */
         }
 
         .advice-section .advice-item {
@@ -636,6 +1055,20 @@
         .advice-sender {
             font-weight: 600;
             font-size: 0.9rem;
+        }
+        
+        /* Point 11: My Dashboard */
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        #my-dashboard-warnings-card {
+            grid-column: 1 / -1; /* Span full width */
+            border: 2px solid var(--color-danger);
+        }
+        #my-dashboard-warnings .item-card {
+            background: #f8d7da;
         }
 
         /* Leader Dashboard & Player Lists */
@@ -651,7 +1084,7 @@
             box-shadow: var(--shadow);
             padding: 25px;
             text-align: center;
-            font-size: 1.2rem;
+            font-size: 1.1rem; /* Slightly smaller */
             font-weight: 600;
             color: var(--color-primary-dark);
             text-decoration: none;
@@ -661,7 +1094,24 @@
             transform: translateY(-5px);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
         }
+        .dashboard-button.btn-danger {
+            background-color: var(--color-danger);
+            color: white;
+        }
+        .dashboard-button.btn-danger:hover {
+            background-color: #b22222;
+        }
         
+        #new-registrations-list .item-card {
+            background: #fefbec;
+        }
+        .reg-details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+
         .player-table-container {
             overflow-x: auto;
         }
@@ -674,6 +1124,7 @@
             padding: 12px 15px;
             border-bottom: 1px solid var(--color-medium-gray);
             text-align: left;
+            vertical-align: middle;
         }
         .player-table th {
             background-color: var(--color-light-gray);
@@ -682,12 +1133,44 @@
         .player-table td .btn {
             padding: 5px 8px;
             font-size: 0.85rem;
-            margin-right: 5px;
+            margin: 2px;
+        }
+        .player-table td .form-control {
+            padding: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .activity-log-box {
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            padding: 15px;
+            border-radius: var(--radius);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        /* Point 13: Forcefully Page */
+        .force-disclaimer {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: var(--radius);
+            padding: 15px;
+            font-weight: 500;
+            color: #856404;
         }
 
         /* Responsive */
+        @media (max-width: 900px) {
+            .header-3d-scene {
+                display: none; /* Hide 3D model on smaller screens */
+            }
+            .profile-details {
+                display: none; /* Hide text details, just show avatar */
+            }
+        }
+
         @media (max-width: 768px) {
-            .assembly-layout {
+            .assembly-layout, .secretariat-layout {
                 flex-direction: column;
                 height: auto;
             }
@@ -696,7 +1179,7 @@
                 max-height: 200px;
             }
             .chat-main {
-                height: 60vh;
+                height: 70vh;
             }
             .header-nav {
                 display: flex;
@@ -704,8 +1187,31 @@
                 gap: 5px;
                 align-items: flex-end;
             }
-            .profile-name-role {
+            .profile-details {
                 display: none;
+            }
+            .login-profiles-row {
+                flex-direction: column;
+                align-items: center;
+            }
+            .central-feed-grid {
+                grid-template-columns: 1fr; /* Single column */
+            }
+            .widget-clan-info, .widget-roster {
+                grid-column: 1; /* Reset span */
+            }
+            .dashboard-layout {
+                grid-template-columns: 1fr;
+            }
+            #my-dashboard-warnings-card {
+                grid-column: 1; /* Reset span */
+            }
+            .secretariat-layout {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            .secretariat-chat .chat-box {
+                height: 300px;
             }
         }
 
@@ -718,172 +1224,201 @@
             <div id="header-logged-out">
                 PLEASE LOGIN
             </div>
+            
             <div id="header-logged-in" style="display: none;">
-                <div class="profile-info">
+                <div class="profile-info" data-action="show-profile" title="View Profile">
                     <div id="user-avatar" class="profile-avatar"></div>
-                    <div class="profile-name-role">
+                    <div class_:"profile-details">
                         <span id="user-name" class="profile-name"></span>
-                        <span id="user-role" class="profile-role"></span>
+                        <span class="profile-meta">
+                            <span id="user-role" class="profile-role"></span>
+                            (<span id="user-id" class="profile-id"></span>)
+                        </span>
                     </div>
                 </div>
+                
+                <div class="header-3d-scene">
+                    <div class="earth-container">
+                        <div class="earth-globe">
+                            <div class="earth-surface"></div>
+                        </div>
+                        <div class="orbit" style="--orbit-radius: 60px; --anim-duration: 8s;">
+                            <div class_:"orbit-object object-crown">👑</div>
+                        </div>
+                        <div class="orbit" style="--orbit-radius: 80px; --anim-duration: 12s; animation-direction: reverse;">
+                            <div class_:"orbit-object object-sword">⚔️</div>
+                        </div>
+                        <div class="orbit" style="--orbit-radius: 100px; --anim-duration: 10s;">
+                            <div class_:"orbit-object object-satellite">🛰️</div>
+                        </div>
+                    </div>
+                </div>
+
                 <nav class="header-nav">
-                    <button class="btn btn-primary" data-action="show-home">🏠 Home</button>
+                    <button class="btn btn-primary" data-action="show-central">Central Page</button>
                     <button id="logout-button" class="btn btn-secondary" data-action="logout">Logout</button>
                 </nav>
             </div>
         </header>
 
         <main class="container">
+            
             <div id="login-page" class="page active">
+                <div class="login-welcome-container">
+                    <h1 class="login-main-title">Welcome To 👑 king 👑 Clan</h1>
+                    
+                    <div class="login-profiles-row">
+                        <div class="login-profile-box">
+                            <h3>Clan Profile</h3>
+                            <div class_:"profile-placeholder-img"></div>
+                            <p>Our history, our strength, our family.</p>
+                        </div>
+                        <div class="login-profile-box">
+                            <h3>Leader Profile</h3>
+                            <div class_:"profile-placeholder-img"></div>
+                            <p>Leading with vision and honor.</p>
+                        </div>
+                    </div>
+
+                    <p class="login-welcome-note">Join us to build the strongest clan. Unity is our power.</p>
+
+                    <div class_:"login-button-group">
+                        <button class="btn btn-primary btn-large" id="show-login-form-btn">Login</button>
+                        <button class="btn btn-secondary btn-large" data-action="show-register">Register</button>
+                    </div>
+
+                    <div class="form-container" id="login-form-wrapper" style="display: none;">
+                        <div class="card">
+                            <h2 class="card-title">Clan Portal Login</h2>
+                            <div id="login-error" class="alert alert-danger" style="display: none;"></div>
+                            <form id="login-form">
+                                <div class="form-group">
+                                    <label for="login-id">Player ID</label>
+                                    <input type="text" id="login-id" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="login-password">Password</label>
+                                    <input type="password" id="login-password" class="form-control" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+                            </form>
+                            <div class="form-footer">
+                                <a id="hide-login-form-btn">&larr; Back</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="post-login-page" class="page">
                 <div class="form-container">
-                    <div class="card">
-                        <h2 class="card-title">Clan Portal Login</h2>
-                        <div id="login-error" class="alert alert-danger" style="display: none;"></div>
-                        <form id="login-form">
-                            <div class="form-group">
-                                <label for="login-id">Player ID</label>
-                                <input type="text" id="login-id" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="login-password">Password</label>
-                                <input type="password" id="login-password" class="form-control" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
-                        </form>
-                        <div class="form-footer">
-                            Don't have an account? <a data-action="show-register">Register here</a>
+                    <div class="card" style="text-align: center;">
+                        <h2 class="card-title" id="post-login-welcome-name">Welcome!</h2>
+                        <p>You have successfully logged in.</p>
+                        <div class_:"post-login-buttons">
+                            <button class="btn btn-primary btn-large" data-action="show-central">Enter the Clan</button>
+                            <button class="btn btn-secondary btn-large" data-action="show-profile">View Profile</button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div id="register-page" class="page">
-                <div class="form-container">
+                <div class="form-container" style="max-width: 700px;">
                     <div class="card">
                         <h2 class="card-title">New Player Registration</h2>
                         <form id="register-form">
-                            <div class="form-group">
-                                <label for="reg-player-id">Player ID (User ID)</label>
-                                <input type="text" id="reg-player-id" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-player-name">Player Name</label>
-                                <input type="text" id="reg-player-name" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-clan-name">Clan Name</label>
-                                <input type="text" id="reg-clan-name" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-clan-id">Clan ID</label>
-                                <input type="text" id="reg-clan-id" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-dob">Date of Birth</label>
-                                <input type="date" id="reg-dob" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-country">Country</label>
-                                <select id="reg-country" class="form-control" required>
-                                    <option value="">-- Select Country --</option>
-                                    <option value="India">India</option>
-                                    <option value="China">China</option>
-                                    <option value="Vietnam">Vietnam</option>
-                                    <option value="Indonesia">Indonesia</option>
-                                    <option value="Japan">Japan</option>
-                                    <option value="South Korea">South Korea</option>
-                                    <option value="Philippines">Philippines</option>
-                                    <option value="Thailand">Thailand</option>
-                                    <option value="Malaysia">Malaysia</option>
-                                    <option value="Singapore">Singapore</option>
-                                    <option value="Other">Other (Asia)</option>
-                                </select>
-                            </div>
-                            <div class="form-group" id="india-states-group" style="display: none;">
-                                <label for="reg-india-state">State / Union Territory</label>
-                                <select id="reg-india-state" class="form-control">
-                                    <option value="">-- Select State/UT --</option>
-                                    <option value="Andhra Pradesh">Andhra Pradesh</option>
-                                    <option value="Arunachal Pradesh">Arunachal Pradesh</option>
-                                    <option value="Assam">Assam</option>
-                                    <option value="Bihar">Bihar</option>
-                                    <option value="Chhattisgarh">Chhattisgarh</option>
-                                    <option value="Goa">Goa</option>
-                                    <option value="Gujarat">Gujarat</option>
-                                    <option value="Haryana">Haryana</option>
-                                    <option value="Himachal Pradesh">Himachal Pradesh</option>
-                                    <option value="Jharkhand">Jharkhand</option>
-                                    <option value="Karnataka">Karnataka</option>
-                                    <option value="Kerala">Kerala</option>
-                                    <option value="Madhya Pradesh">Madhya Pradesh</option>
-                                    <option value="Maharashtra">Maharashtra</option>
-                                    <option value="Manipur">Manipur</option>
-                                    <option value="Meghalaya">Meghalaya</option>
-                                    <option value="Mizoram">Mizoram</option>
-                                    <option value="Nagaland">Nagaland</option>
-                                    <option value="Odisha">Odisha</option>
-                                    <option value="Punjab">Punjab</option>
-                                    <option value="Rajasthan">Rajasthan</option>
-                                    <option value="Sikkim">Sikkim</option>
-                                    <option value="Tamil Nadu">Tamil Nadu</option>
-                                    <option value="Telangana">Telangana</option>
-                                    <option value="Tripura">Tripura</option>
-                                    <option value="Uttar Pradesh">Uttar Pradesh</option>
-                                    <option value="Uttarakhand">Uttarakhand</option>
-                                    <option value="West Bengal">West Bengal</option>
-                                    <option value="Andaman and Nicobar">Andaman and Nicobar Islands</option>
-                                    <option value="Chandigarh">Chandigarh</option>
-                                    <option value="Dadra and Nagar Haveli">Dadra and Nagar Haveli and Daman and Diu</option>
-                                    <option value="Delhi">Delhi</option>
-                                    <option value="Jammu and Kashmir">Jammu and Kashmir</option>
-                                    <option value="Ladakh">Ladakh</option>
-                                    <option value="Lakshadweeep">Lakshadweeep</option>
-                                    <option value="Puducherry">Puducherry</option>
-                                </select>
-                            </div>
-                            <div class="form-group" id="other-region-group" style="display: none;">
-                                <label for="reg-other-region">Region / State</label>
-                                <input type="text" id="reg-other-region" class="form-control">
+                            <div class_:"reg-section">
+                                <h3>Core Identity</h3>
+                                <div class="form-group">
+                                    <label for="reg-player-id">Player ID (User ID) *</label>
+                                    <input type="text" id="reg-player-id" class="form-control" required>
+                                    <small>This will be your permanent User ID.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="reg-player-name">Player Name (In-Game Name) *</label>
+                                    <input type="text" id="reg-player-name" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="reg-clan-name">Clan Name *</label>
+                                    <select id="reg-clan-name" class="form-control" required>
+                                        <option value="King Clan">King Clan</option>
+                                        <option value="Friend Clan">Friend Clan</option>
+                                        <option value="Other Clan">Other Clan</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="reg-dob">Date of Birth *</label>
+                                    <input type="date" id="reg-dob" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="reg-role">Select Your Role *</label>
+                                    <select id="reg-role" class="form-control" required>
+                                        <option value="Member">Member</option>
+                                        <option value="Elder">Elder</option>
+                                        <option value="Co-Leader">Co-Leader</option>
+                                        <option value="Not Allotted">Not Allotted</option>
+                                    </select>
+                                    <small>Your role will be verified by the Leader after registration.</small>
+                                </div>
                             </div>
                             
-                            <div class="form-group">
-                                <label for="reg-lang-primary">Primary Language (Compulsory)</label>
-                                <select id="reg-lang-primary" class="form-control" required disabled>
-                                    <option value="English" selected>English</option>
-                                </select>
+                            <div class_:"reg-section">
+                                <h3>Region & Language</h3>
+                                <div class="form-group">
+                                    <label for="reg-country">Country *</label>
+                                    <select id="reg-country" class="form-control" required>
+                                        <option value="">-- Select Country --</option>
+                                        </select>
+                                </div>
+                                <div class="form-group" id="india-states-group" style="display: none;">
+                                    <label for="reg-india-state">State / Union Territory *</label>
+                                    <select id="reg-india-state" class="form-control">
+                                        </select>
+                                </div>
+                                <div class="form-group" id="other-region-group" style="display: none;">
+                                    <label for="reg-other-region">Region / State</label>
+                                    <input type="text" id="reg-other-region" class="form-control">
+                                </div>
+                                <div class="form-group" id="india-districts-group" style="display: none;">
+                                    <label for="reg-india-district">District (Optional)</label>
+                                    <input type="text" id="reg-india-district" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="reg-lang-primary">Primary Language *</label>
+                                    <select id="reg-lang-primary" class="form-control" required disabled>
+                                        <option value="English" selected>English</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="reg-lang-secondary">Secondary Languages (Select at least 1) *</label>
+                                    <select id="reg-lang-secondary" class="form-control" multiple size="8">
+                                        </select>
+                                    <small>Hold Ctrl (or Cmd on Mac) to select multiple.</small>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="reg-lang-secondary">Secondary Languages (Select at least 1)</label>
-                                <select id="reg-lang-secondary" class="form-control" multiple size="8">
-                                    <option value="Mandarin Chinese">Mandarin Chinese</option>
-                                    <option value="Hindi">Hindi</option>
-                                    <option value="Bengali">Bengali</option>
-                                    <option value="Japanese">Japanese</option>
-                                    <option value="Vietnamese">Vietnamese</option>
-                                    <option value="Korean">Korean</option>
-                                    <option value="Tamil">Tamil</option>
-                                    <option value="Urdu">Urdu</option>
-                                    <option value="Javanese">Javanese</option>
-                                    <option value="Telugu">Telugu</option>
-                                    <option value="Turkish">Turkish</option>
-                                    <option value="Marathi">Marathi</option>
-                                    <option value="Thai">Thai</option>
-                                    <option value="Malay/Indonesian">Malay/Indonesian</option>
-                                    <option value="Filipino (Tagalog)">Filipino (Tagalog)</option>
-                                </select>
-                                <small>Hold Ctrl (or Cmd on Mac) to select multiple.</small>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-role">Select Your Role</label>
-                                <select id="reg-role" class="form-control" required>
-                                    <option value="Member" selected>Member</option>
-                                    <option value="Elder">Elder</option>
-                                    <option value="Co-Leader">Co-Leader</option>
-                                </select>
-                                <small>Leader role cannot be registered.</small>
+
+                            <div class_:"reg-section">
+                                <h3>Optional Details</h3>
+                                <div class="form-group">
+                                    <label for="reg-profile-pic">Upload Your Profile Picture (Optional)</label>
+                                    <input type="file" id="reg-profile-pic" class="form-control" accept="image/*">
+                                </div>
+                                <div class="form-group">
+                                    <label for="reg-nickname">Nickname (Optional)</label>
+                                    <input type="text" id="reg-nickname" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="reg-note">Positive Note (Optional)</label>
+                                    <textarea id="reg-note" class="form-control" rows="3"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="reg-mobile">Mobile Number (OPTIONAL)</label>
+                                    <input type="tel" id="reg-mobile" class="form-control">
+                                </div>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">Register</button>
+                            <button type="submit" id="register-submit-btn" class="btn btn-primary" style="width: 100%;">Register</button>
                         </form>
                         <div class="form-footer">
                             Already have an account? <a data-action="show-login">Login here</a>
@@ -892,13 +1427,196 @@
                 </div>
             </div>
 
-            <div id="home-page" class="page">
-                <div class="home-grid" id="home-buttons-grid">
-                    </div>
-                <div class="card cabinet-list">
-                    <h3>👑 Cabinet Players</h3>
-                    <div id="cabinet-player-list">
+            <div id="register-success-page" class="page">
+                <div class="form-container">
+                    <div class="card" style="text-align: center;">
+                        <h2 class="card-title">✅ Registration Successful!</h2>
+                        <p>Your account is created. Please save these details:</p>
+                        <div class_:"reg-success-details">
+                            <p><strong>Player ID:</strong> <span id="reg-success-id"></span></p>
+                            <p><strong>Password:</strong> <span id="reg-success-pass"></span></p>
                         </div>
+                        <p><small>This password is also visible to the Clan Leader.</small></p>
+                        <button class="btn btn-primary" data-action="show-login">Proceed to Login</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="profile-page" class="page">
+                <div class="form-container" style="max-width: 700px;">
+                    <div class="card">
+                        <button class="btn btn-secondary" data-action="show-central" style="margin-bottom: 20px;">&larr; Back to Previous Page</button>
+                        <h2 class="card-title">My Profile</h2>
+                        
+                        <div class_:"profile-pic-area">
+                            <img id="profile-pic-img" src="" alt="Profile Picture" class="profile-pic-large">
+                            <label for="profile-pic-upload">Change Picture:</label>
+                            <input type="file" id="profile-pic-upload" class="form-control" accept="image/*">
+                        </div>
+
+                        <form id="profile-update-form">
+                            <div class_:"profile-section">
+                                <h3>Read-Only Details</h3>
+                                <div class="form-group">
+                                    <label>Player ID</label>
+                                    <input type="text" id="profile-id" class="form-control" disabled>
+                                </div>
+                                <div class="form-group">
+                                    <label>Player Name</label>
+                                    <input type="text" id="profile-name" class="form-control" disabled>
+                                </div>
+                                <div class="form-group">
+                                    <label>Role</label>
+                                    <input type="text" id="profile-role" class="form-control" disabled>
+                                </div>
+                                <div class="form-group">
+                                    <label>Country</label>
+                                    <input type="text" id="profile-country" class="form-control" disabled>
+                                </div>
+                                <div class="form-group" id="profile-state-group" style="display: none;">
+                                    <label>State</label>
+                                    <input type="text" id="profile-state" class="form-control" disabled>
+                                </div>
+                            </div>
+                            
+                            <div class_:"profile-section">
+                                <h3>Editable Details</h3>
+                                <div class="form-group">
+                                    <label for="profile-nickname">Nickname</label>
+                                    <input type="text" id="profile-nickname" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="profile-note">Positive Note</label>
+                                    <textarea id="profile-note" class="form-control" rows="3"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="profile-mobile">Mobile Number (OPTIONAL)</label>
+                                    <input type="tel" id="profile-mobile" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="profile-lang-secondary">Secondary Languages</label>
+                                    <select id="profile-lang-secondary" class="form-control" multiple size="8">
+                                        </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Changes</button>
+                                <div id="profile-update-success" class="alert alert-success" style="display: none; margin-top: 15px;"></div>
+                            </div>
+                        </form>
+                        
+                        <form id="password-change-form">
+                            <div class_:"profile-section">
+                                <h3>Change Password</h3>
+                                <div id="password-change-error" class="alert alert-danger" style="display: none;"></div>
+                                <div id="password-change-success" class="alert alert-success" style="display: none;"></div>
+                                <div class="form-group">
+                                    <label for="profile-new-pass">New Password</label>
+                                    <input type="password" id="profile-new-pass" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="profile-confirm-pass">Confirm New Password</label>
+                                    <input type="password" id="profile-confirm-pass" class="form-control" required>
+                                </div>
+                                <button type="submit" class="btn btn-warning" style="width: 100%;">Update Password</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div id="central-page" class="page">
+                <div class="central-feed-grid">
+                    <div class_:"central-widget widget-clan-info">
+                        <div class_:"clan-info-header">
+                            <img src="" alt="Clan Photo" class="clan-info-photo">
+                            <div>
+                                <h2 id="central-clan-name">👑 king 👑</h2>
+                                <p id="central-clan-id">#2G0YJ080V</p>
+                            </div>
+                        </div>
+                        <div class_:"clan-info-leader">
+                            Leader: <span id="central-leader-name">⚔️Aryan⚔️ 👑</span>
+                        </div>
+                        <div class_:"clan-info-time" id="central-datetime">
+                            Loading date and time...
+                        </div>
+                    </div>
+
+                    <div class_:"central-widget widget-drafts" data-action="show-drafts-voting">
+                        <h3>⚖️ Drafts & Voting</h3>
+                        <p>Have your say in new clan laws.</p>
+                        <div class_:"widget-status" id="central-draft-status"></div>
+                    </div>
+                    
+                    <div class_:"central-widget widget-players">
+                        <h3>🏆 Top Players by Power</h3>
+                        <div id="central-top-players-list">
+                            </div>
+                    </div>
+
+                    <div class_:"central-widget widget-parliament" data-action="show-parliament">
+                        <h3>🏛️ Parliament of Clan</h3>
+                        <p>Access all clan assemblies.</p>
+                    </div>
+
+                    <div class_:"central-widget widget-notice" data-action="show-notice-board">
+                        <span class_:"notification-badge" id="central-notice-badge" style="display: none;">NEW</span>
+                        <h3>📢 Notice Board</h3>
+                        <p id="central-notice-snippet">Loading latest notice...</p>
+                    </div>
+
+                    <div class_:"central-widget widget-rules" data-action="show-rules">
+                        <h3>📜 Rules of Clan</h3>
+                        <p>Know the laws that bind us.</p>
+                    </div>
+
+                    <div class_:"central-widget widget-dm" data-action="show-leader-chat">
+                        <h3>💬 Leader Chat (DM)</h3>
+                        <p>Send a private message to the Leader.</p>
+                    </div>
+
+                    <div class_:"central-widget widget-advice" data-action="show-advisory">
+                        <h3>🧠 Give Advice</h3>
+                        <p>Submit general advice to leadership.</p>
+                    </div>
+
+                    <div class_:"central-widget widget-dashboard" data-action="show-my-dashboard" id="central-dashboard-button">
+                        <h3>My Dashboard</h3>
+                        <p>View your personal notifications & status.</p>
+                    </div>
+
+                    <div class_:"central-widget widget-roster">
+                        <h3>🎖️ Clan Roster</h3>
+                        <div id="central-roster-lists">
+                            <h4>Leader</h4>
+                            <div id="central-leader-list"></div>
+                            <h4>Co-Leaders</h4>
+                            <div id="central-coleader-list"></div>
+                            <h4>Elders</h4>
+                            <div id="central-elder-list"></div>
+                            <h4>Members</h4>
+                            <div id="central-member-list"></div>
+                            
+                            <h4>Cabinet Secretary</h4>
+                            <div id="central-cabinet-list"></div>
+                            <h4>General Secretary</h4>
+                            <div id="central-gensec-list"></div>
+                            <h4>Governors</h4>
+                            <div id="central-governor-list"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="parliament-page" class="page">
+                <div class="card">
+                    <button class="btn btn-secondary" data-action="show-central" style="margin-bottom: 20px;">&larr; Back to Previous Page</button>
+                    <h2 class="card-title">🏛️ Parliament of Clan</h2>
+                    <div class="home-grid">
+                        <div class="home-button" data-action="show-general-assembly">🗣 General Assembly</div>
+                        <div class="home-button" data-action="show-special-assembly">👑 Special Assembly</div>
+                        <div class="home-button" data-action="show-secretariat">🏛️ Secretariat</div>
+                    </div>
                 </div>
             </div>
             
@@ -916,6 +1634,12 @@
                         <div class="chat-box" id="ga-chat-box">
                             </div>
                         
+                        <div id="ga-reply-preview" class="reply-preview" style="display: none;">
+                            <span class_:"reply-preview-close" data-action="ga-cancel-reply">✖</span>
+                            <p>Replying to <b id="ga-reply-user"></b>:</p>
+                            <p id="ga-reply-text"></p>
+                        </div>
+
                         <div id="ga-controls-container" class="chat-controls-container">
                             </div>
 
@@ -945,6 +1669,12 @@
                         <div class="chat-box" id="sa-chat-box">
                             </div>
                         
+                        <div id="sa-reply-preview" class="reply-preview" style="display: none;">
+                            <span class_:"reply-preview-close" data-action="sa-cancel-reply">✖</span>
+                            <p>Replying to <b id="sa-reply-user"></b>:</p>
+                            <p id="sa-reply-text"></p>
+                        </div>
+
                         <div id="sa-controls-container" class="chat-controls-container">
                             </div>
 
@@ -956,28 +1686,55 @@
                             <input type="text" id="sa-chat-input" class="form-control" placeholder="Type your message..." autocomplete="off">
                             <button type="submit" class="btn btn-primary">Post</button>
                         </form>
-                        <div id="sa-post-error" class="alert alert-danger" style="display: none; margin: 20px;">Only Leader and Co-Leaders can post here.</div>
+                        <div id="sa-post-error" class="alert alert-danger" style="display: none; margin: 20px;">Only Leader, Governors, and Co-Leaders can post here.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="secretariat-page" class="page">
+                <div class="secretariat-layout">
+                    <div class="secretariat-main">
+                        <div class="card">
+                            <h2 class="card-title">🏛️ Secretariat Notices</h2>
+                            <div id="secretariat-post-form" style="display: none;">
+                                <h3>Post a New Secretariat Notice</h3>
+                                <form id="new-secretariat-notice-form">
+                                    <div class="form-group">
+                                        <label for="secretariat-notice-title">Title</label>
+                                        <input type="text" id="secretariat-notice-title" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="secretariat-notice-content">Content</label>
+                                        <textarea id="secretariat-notice-content" class="form-control" required></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Post Notice</button>
+                                </form>
+                            </div>
+                            <div class="item-list" id="secretariat-notice-list" style="margin-top: 20px;">
+                                </div>
+                        </div>
+                    </div>
+                    <div class="secretariat-chat">
+                        <div class="chat-main" style="height: 100%;">
+                            <div class="card-title" style="padding: 15px 20px; margin: 0; border-radius: 0;">Secretariat Chat</div>
+                            <div class="chat-box" id="sec-chat-box" style="height: calc(100vh - 300px);">
+                                </div>
+                            <form id="sec-chat-form" class="chat-input-form" style="display: none;">
+                                <input type="text" id="sec-chat-input" class="form-control" placeholder="Type your message..." autocomplete="off">
+                                <button type="submit" class="btn btn-primary">Send</button>
+                            </form>
+                            <div id="sec-post-error" class="alert alert-info" style="padding: 10px; text-align: center;">
+                                Only Leader & General Secretary can chat here.
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div id="notice-board-page" class="page">
                 <div class="card">
+                    <button class="btn btn-secondary" data-action="show-central" style="margin-bottom: 20px;">&larr; Back to Previous Page</button>
                     <h2 class="card-title">📢 Notice Board</h2>
-                    <div id="notice-board-post-form" style="display: none;">
-                        <h3>Post a New Notice</h3>
-                        <form id="new-notice-form">
-                            <div class="form-group">
-                                <label for="notice-title">Title</label>
-                                <input type="text" id="notice-title" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="notice-content">Content</label>
-                                <textarea id="notice-content" class="form-control" required></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Post Notice</button>
-                        </form>
-                    </div>
                     <div class="item-list" id="notice-list" style="margin-top: 20px;">
                         </div>
                 </div>
@@ -985,6 +1742,7 @@
 
             <div id="drafts-voting-page" class="page">
                 <div class="card">
+                    <button class="btn btn-secondary" data-action="show-central" style="margin-bottom: 20px;">&larr; Back to Previous Page</button>
                     <h2 class="card-title">⚖️ Drafts & Voting</h2>
                     <div class="item-list" id="drafts-list">
                         </div>
@@ -1001,11 +1759,12 @@
 
                     <div id="draft-results-section" style="display: none;">
                         <h3>Vote Results</h3>
+                        <div id="draft-result-timer" class="alert alert-info"></div>
                         <div class="vote-results">
                             <pre id="draft-vote-summary" class="vote-summary"></pre>
                         </div>
-                        <div id="draft-leader-activation-section" style="display: none; margin-top: 20px;">
-                            <button id="draft-activate-btn" class="btn btn-success" style="width: 100%; padding: 15px; font-size: 1.2rem;">Notify & Activate Law</button>
+                        <div id="draft-auto-activation-note" class="alert alert-success" style="display: none;">
+                            This draft has passed and will be automatically activated as a rule and notice after the results phase.
                         </div>
                     </div>
 
@@ -1038,6 +1797,7 @@
 
             <div id="leader-chat-page" class="page">
                 <div class="card form-container">
+                    <button class="btn btn-secondary" data-action="show-central" style="margin-bottom: 20px;">&larr; Back to Previous Page</button>
                     <h2 class="card-title">💬 Leader Chat (Private Message)</h2>
                     <div class="alert alert-info">Your message will be sent privately to the Leader.</div>
                     <form id="leader-chat-form">
@@ -1055,17 +1815,21 @@
             </div>
 
             <div id="rules-page" class="page">
-                <div class="card">
-                    <h2 class="card-title">📜 Rules of Clan</h2>
-                    <div class="item-list" id="rules-list">
-                        </div>
+                <div class_:"rules-container">
+                    <div class="card">
+                        <button class="btn btn-secondary" data-action="show-central" style="margin-bottom: 20px;">&larr; Back to Previous Page</button>
+                        <h2 class="card-title">📜 Rules of Clan</h2>
+                        <div class="item-list" id="rules-list">
+                            </div>
+                    </div>
                 </div>
             </div>
 
             <div id="advisory-page" class="page">
                 <div class="card form-container">
+                    <button class="btn btn-secondary" data-action="show-central" style="margin-bottom: 20px;">&larr; Back to Previous Page</button>
                     <h2 class="card-title">🧠 Advisory Committee</h2>
-                    <div class="alert alert-info">Submit your advice directly to the Leader's private dashboard.</div>
+                    <div class="alert alert-info">Submit your general advice directly to the Leader's private dashboard.</div>
                     <form id="advisory-form">
                         <div class="form-group">
                             <label for="advisory-subject">Subject / Category</label>
@@ -1075,27 +1839,69 @@
                             <label for="advisory-message">Your Advice</label>
                             <textarea id="advisory-message" class="form-control" required></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary">Submit Advice</button>
+                        <div class="form-group">
+                            <label for="advisory-file">Attach File (Optional)</label>
+                            <input type="file" id="advisory-file" class="form-control">
+                        </div>
+                        <button type="submit" id="advisory-submit-btn" class="btn btn-primary">Submit Advice</button>
                     </form>
                 </div>
             </div>
 
+            <div id="my-dashboard-page" class="page">
+                <div class="card">
+                    <button class="btn btn-secondary" data-action="show-central" style="margin-bottom: 20px;">&larr; Back to Previous Page</button>
+                    <h2 class="card-title" id="my-dashboard-title">My Dashboard</h2>
+                </div>
+                
+                <div class_:"dashboard-layout">
+                    <div class="card" id="my-dashboard-warnings-card">
+                        <h3 class="card-title" style="color: #dc3545;">🚨 Leader Warnings</h3>
+                        <div class="item-list" id="my-dashboard-warnings">
+                            <p>You have no warnings.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3 class="card-title">📣 Leader Advisory</h3>
+                        <div class="item-list" id="my-dashboard-advisories">
+                            <p>No new advisories from the Leader.</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title">🔔 Notifications</h3>
+                        <div class="item-list" id="my-dashboard-notifications">
+                            <p>No new notifications.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="leader-dashboard-page" class="page">
+                <button class="btn btn-secondary" data-action="show-central" style="margin-bottom: 20px;">&larr; Back to Previous Page</button>
                 <h2 class="card-title">🛡️ Leader Dashboard</h2>
                 <div class="dashboard-grid">
                     <a href="#" class="dashboard-button" data-action="show-players-actions">👥 Players & Actions</a>
-                    <a href="#" class="dashboard-button" data-action="show-quarry">📥 Quarry (Inbox)</a>
+                    <a href="#" class="dashboard-button" data-action="show-quarry">📥 Quarry (DM Inbox)</a>
                     <a href="#" class="dashboard-button" data-action="show-advisory-inbox">🧠 Advisory Inbox</a>
                     <a href="#" class="dashboard-button" data-action="show-create-draft">✍️ Create Draft Rule</a>
+                    <a href="#" class="dashboard-button" data-action="show-publish-notice">✍️ Publish Notice</a>
+                    <a href="#" class="dashboard-button" data-action="show-publish-rule">✍️ Publish Rule (Direct)</a>
                     <a href="#" class="dashboard-button" data-action="show-cabinet-management">🎖️ Cabinet Management</a>
+                    <a href="#" class_:"dashboard-button" data-action="show-gensec-management">🎖️ Gen. Secretary Mgmt</a>
+                    <a href="#" class_:"dashboard-button" data-action="show-governor-management">🎖️ Governor Management</a>
                     <a href="#" class="dashboard-button" data-action="export-player-data">📊 Export Player Data (JSON)</a>
+                    <a href="#" class="dashboard-button" data-action="show-forcefully-verify" style="background-color: #dc3545; color: white;">🔥 Forcefully Button</a>
                 </div>
                 
                 <div id="new-registrations-card" class="card" style="margin-top: 30px;">
                     <h3 class="card-title">🔔 New Registrations</h3>
-                    <div id="new-registrations-list"></div>
+                    <div id="new-registrations-list">
+                        </div>
                 </div>
             </div>
+
             <div id="players-actions-page" class="page">
                 <div class="card">
                     <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
@@ -1127,7 +1933,7 @@
                     <div id="player-detail-info"></div>
 
                     <h3>Activity Log</h3>
-                    <div id="player-detail-activity" style="background: #f9f9f9; border: 1px solid #eee; padding: 15px; border-radius: var(--radius); max-height: 500px; overflow-y: auto;">
+                    <div id="player-detail-activity" class_:"activity-log-box">
                         </div>
                 </div>
             </div>
@@ -1163,7 +1969,44 @@
                             <label for="draft-description">Full Description</label>
                             <textarea id="draft-description" class="form-control" required></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">Publish Draft (Starts 5h Advice Phase)</button>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Publish Draft (Starts 18h Process)</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="publish-notice-page" class="page">
+                <div class="card form-container">
+                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
+                    <h2 class="card-title">✍️ Publish New Notice</h2>
+                    <form id="new-notice-form">
+                        <div class="form-group">
+                            <label for="notice-title">Notice Title</label>
+                            <input type="text" id="notice-title" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="notice-content">Content</label>
+                            <textarea id="notice-content" class="form-control" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Post Notice</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="publish-rule-page" class="page">
+                <div class="card form-container">
+                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
+                    <h2 class="card-title">✍️ Publish Rule Directly</h2>
+                    <div class="alert alert-warning">This rule will be published immediately without a vote.</div>
+                    <form id="publish-rule-form">
+                        <div class="form-group">
+                            <label for="rule-title">Rule Title</label>
+                            <input type="text" id="rule-title" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="rule-description">Full Description</label>
+                            <textarea id="rule-description" class="form-control" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Publish Rule Now</button>
                     </form>
                 </div>
             </div>
@@ -1172,7 +2015,7 @@
                 <div class="card">
                     <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
                     <h2 class="card-title">🎖️ Cabinet Management (Max 5)</h2>
-                    <div class="alert alert-info">Cabinet Players can post on the Notice Board. Select Co-Leaders or Elders to be in the cabinet.</div>
+                    <div class="alert alert-info">Cabinet Players can post on the Notice Board. No term limits.</div>
                     <form id="cabinet-management-form">
                         <div class="form-group" id="cabinet-player-options">
                             </div>
@@ -1181,14 +2024,96 @@
                 </div>
             </div>
 
+            <div id="gensec-management-page" class="page">
+                <div class="card">
+                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
+                    <h2 class="card-title">🎖️ General Secretary Management (Max 1)</h2>
+                    <div class="alert alert-info">The General Secretary can post in the Secretariat. 10-day min, 30-day max term.</div>
+                    <div id="gensec-current" class_:"item-card"></div>
+                    <form id="gensec-management-form">
+                        <div class="form-group" id="gensec-player-options">
+                            </div>
+                        <button type="submit" class="btn btn-primary">Appoint General Secretary</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="governor-management-page" class="page">
+                <div class="card">
+                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
+                    <h2 class="card-title">🎖️ Governor Management (Max 5)</h2>
+                    <div class="alert alert-info">Governors can post in the Special Assembly. 10-day min, 30-day max term.</div>
+                    <div id="governor-current-list" class_:"item-list"></div>
+                    <form id="governor-management-form">
+                        <div class="form-group" id="governor-player-options">
+                            </div>
+                        <button type="submit" class="btn btn-primary">Update Governors</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="forcefully-verify-page" class="page">
+                <div class="card form-container" style="border: 3px solid #dc3545;">
+                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
+                    <h2 class="card-title" style="color: #dc3545;">🔥 Forceful Action Verification</h2>
+                    <div id="force-verify-error" class="alert alert-danger" style="display: none;"></div>
+                    <form id="force-verify-form">
+                        <div class="form-group">
+                            <label for="force-verify-id">Leader ID</label>
+                            <input type="text" id="force-verify-id" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="force-verify-pass">Leader Password</label>
+                            <input type="password" id="force-verify-pass" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="force-verify-confirm">Type "CONFIRM" to proceed</label>
+                            <input type="text" id="force-verify-confirm" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="force-verify-captcha">Captcha: What is 7 + 3?</label>
+                            <input type="text" id="force-verify-captcha" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="force-verify-reason">Reason for Action</label>
+                            <textarea id="force-verify-reason" class="form-control" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <div class_:"force-disclaimer">
+                                <p>I, the Leader, understand that actions on the next page are permanent, destructive, and bypass all clan voting procedures. I take full responsibility for their consequences.</p>
+                            </div>
+                            <input type="checkbox" id="force-verify-accept" required>
+                            <label for="force-verify-accept"> I accept and understand.</label>
+                        </div>
+                        <button type="submit" class="btn btn-danger" style="width: 100%; font-size: 1.2rem;">Unlock Secure Powers</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="forcefully-powers-page" class="page">
+                <div class="card" style="border: 3px solid #dc3545;">
+                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
+                    <h2 class="card-title" style="color: #dc3545;">🔥 Secure Powers</h2>
+                    <div class_:"alert alert-danger">Warning: All actions on this page are immediate and permanent.</div>
+                    
+                    <div class="dashboard-grid">
+                        <a href="#" class_:"dashboard-button btn-danger" data-action="force-delete-player">Delete Any Player</a>
+                        <a href="#" class_:"dashboard-button btn-danger" data-action="force-change-pass">Change Any Password</a>
+                        <a href="#" class_:"dashboard-button btn-danger" data-action="force-delete-notice">Delete Any Notice</a>
+                        <a href="#" class_:"dashboard-button btn-danger" data-action="force-delete-rule">Delete Any Rule</a>
+                        <a href="#" class_:"dashboard-button btn-danger" data-action="force-cancel-draft">Cancel Any Draft</a>
+                        <a href="#" class_:"dashboard-button btn-danger" data-action="force-delete-message">Delete Any Chat Message</a>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+              document.addEventListener('DOMContentLoaded', () => {
 
-            // --- 1. FIREBASE SETUP ---
-            // 🔴 यह आपका FIREBASE CONFIG कोड है
+            // --- 1. FIREBASE SETUP (Mandate: Use existing config) ---
             const firebaseConfig = {
               apiKey: "AIzaSyDkKkOLlq-Ipr8mgzd5hfE6X-qkQgAdYCE",
               authDomain: "clanportal.firebaseapp.com",
@@ -1203,7 +2128,6 @@
             firebase.initializeApp(firebaseConfig);
             
             const db = firebase.firestore(); 
-            // ★★★ NEW: Firebase Storage reference ★★★
             const storage = firebase.storage();
 
             // --- 2. State and Database References ---
@@ -1215,11 +2139,18 @@
                 viewingPlayerId: null,
                 allUsersCache: [], // सभी यूज़र्स को कैश करने के लिए
                 listeners: {}, // Real-time listeners को मैनेज करने के लिए
-                // ★★★ NEW: Store files being uploaded ★★★
-                fileToUpload: {
+                fileToUpload: { // For chat and advice
+                    ga: null,
+                    sa: null,
+                    advisory: null,
+                    regProfile: null,
+                    profile: null
+                },
+                currentReply: { // For chat replies (Point 7)
                     ga: null,
                     sa: null
-                }
+                },
+                noticeReadStatus: {} // For notice badge (Point 6)
             };
 
             // Database collections के रेफरेन्स
@@ -1229,8 +2160,15 @@
             const draftsCollection = db.collection('drafts');
             const rulesCollection = db.collection('rules');
             const noticesCollection = db.collection('notices');
-            const adviceCollection = db.collection('advice');
+            const adviceCollection = db.collection('advice'); // General advice
             const dmsCollection = db.collection('dms');
+            // New Collections
+            const secretariatNoticesCollection = db.collection('secretariatNotices');
+            const secretariatMessagesCollection = db.collection('secretariatMessages');
+            const warningsCollection = db.collection('warnings');
+            const advisoriesCollection = db.collection('leaderAdvisories');
+            const notificationsCollection = db.collection('notifications');
+            const playerMasterListCollection = db.collection('playerMasterList');
 
 
             // --- 3. Initialization ---
@@ -1241,9 +2179,12 @@
                     if (!metaDoc.exists) {
                         await metaCollection.doc('main').set({
                             cabinet: [],
+                            generalSecretary: null,
+                            governors: [],
                             newRegistrations: [],
-                            pinnedMessageGA: null, // ★★★ NEW
-                            pinnedMessageSA: null  // ★★★ NEW
+                            pinnedMessageGA: null,
+                            pinnedMessageSA: null,
+                            lastNoticeTimestamp: null
                         }, { merge: true });
                         console.log("Initialized 'meta/main' document.");
                     }
@@ -1251,8 +2192,7 @@
                     console.error("Error initializing meta doc:", error);
                 }
 
-
-                // Set up the final Leader account if it doesn't exist
+                // Core Mandate: Preserve Leader Account
                 try {
                     const leaderDoc = await usersCollection.doc('Aryanrajput').get();
                     
@@ -1260,16 +2200,21 @@
                         await usersCollection.doc('Aryanrajput').set({
                             id: 'Aryanrajput',
                             name: '⚔️Aryan⚔️',
-                            clanName: '👑 king 👑',
-                            clanId: '#2G0YJ080V',
+                            clanName: 'King Clan', // Updated to match new dropdown
+                            clanId: '#2G0YJ080V', // Keeping old Clan ID, can be updated
                             dob: '2000-01-01',
                             country: 'India',
                             state: 'Delhi',
-                            languages: 'English',
-                            password: '91621272', 
+                            languages: 'English, Hindi',
+                            password: '91621272', // Core Mandate
                             role: 'Leader',
                             status: 'active',
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            // New fields
+                            nickname: 'Leader Aryan',
+                            positiveNote: 'Building the strongest clan.',
+                            mobile: '',
+                            profilePicUrl: ''
                         });
                         console.log("Final Leader account created. ID: Aryanrajput, Pass: 91621272");
                     }
@@ -1277,14 +2222,34 @@
                     console.error("Error checking/creating leader:", error);
                 }
 
+                // Populate new registration form dropdowns (Point 3)
+                populateCountryDropdown();
+                populateLanguageDropdown('default'); // Populate with Asian languages first
+                populateIndiaStatesDropdown();
                 
-                // Check session storage for logged in user
-                const sessionUser = sessionStorage.getItem('clanPortalUser');
-                if (sessionUser) {
-                    appState.currentUser = JSON.parse(sessionUser);
-                    await cacheAllUsers(); // सभी यूज़र्स की जानकारी लोड करें
-                    updateHeader();
-                    showPage('home-page');
+                // Point 2: Check localStorage for logged in user
+                const storedUser = localStorage.getItem('clanPortalUser');
+                if (storedUser) {
+                    try {
+                        appState.currentUser = JSON.parse(storedUser);
+                        // Fetch the user data from Firestore to ensure it's up-to-date
+                        const freshUserDoc = await usersCollection.doc(appState.currentUser.id).get();
+                        if (freshUserDoc.exists && freshUserDoc.data().status === 'active') {
+                            appState.currentUser = freshUserDoc.data();
+                            localStorage.setItem('clanPortalUser', JSON.stringify(appState.currentUser)); // Re-save fresh data
+                            
+                            await cacheAllUsers(); // सभी यूज़र्स की जानकारी लोड करें
+                            updateHeader();
+                            document.getElementById('post-login-welcome-name').textContent = `Welcome, ${appState.currentUser.name}!`;
+                            showPage('post-login-page'); // Navigate to post-login screen (Point 2)
+                        } else {
+                            // User was deleted or banned, clear local storage
+                            handleLogout();
+                        }
+                    } catch (e) {
+                        console.error("Error parsing stored user:", e);
+                        handleLogout();
+                    }
                 } else {
                     updateHeader();
                     showPage('login-page');
@@ -1294,7 +2259,115 @@
                 attachEventListeners();
             }
 
-            // --- Helper: Cache All Users ---
+            // --- 4. Helper & Utility Functions ---
+
+            // Point 1: New Page Navigation with Animation
+            function showPage(pageId, context = null) {
+                // 1. Detach old listeners
+                detachAllListeners();
+                
+                // 2. Clear transient state
+                appState.fileToUpload = { ga: null, sa: null, advisory: null, regProfile: null, profile: null };
+                appState.currentReply = { ga: null, sa: null };
+                
+                // 3. Find current and next pages
+                const currentPageEl = document.querySelector('.page.active');
+                const nextPageEl = document.getElementById(pageId);
+
+                if (!nextPageEl) {
+                    console.error(`Page not found: ${pageId}`);
+                    showPage(appState.currentUser ? 'central-page' : 'login-page');
+                    return;
+                }
+                
+                // 4. Handle animation
+                if (currentPageEl) {
+                    currentPageEl.classList.remove('active');
+                }
+                nextPageEl.classList.add('active');
+                appState.currentPage = pageId;
+
+                // 5. Run page-specific logic AFTER page is shown
+                switch (pageId) {
+                    case 'post-login-page':
+                        document.getElementById('post-login-welcome-name').textContent = `Welcome, ${appState.currentUser.name}!`;
+                        break;
+                    case 'profile-page':
+                        renderProfilePage();
+                        break;
+                    case 'central-page':
+                        renderCentralPage();
+                        break;
+                    case 'general-assembly-page':
+                        renderGeneralAssembly();
+                        renderChatControls('ga'); 
+                        break;
+                    case 'special-assembly-page':
+                        renderSpecialAssembly();
+                        renderChatControls('sa');
+                        break;
+                    case 'secretariat-page':
+                        renderSecretariatPage();
+                        break;
+                    case 'notice-board-page':
+                        renderNoticeBoard();
+                        break;
+                    case 'drafts-voting-page':
+                        renderDraftsVotingPage();
+                        break;
+                    case 'draft-detail-page':
+                        appState.currentDraftId = context.draftId;
+                        renderDraftDetailPage(context.draftId);
+                        break;
+                    case 'rules-page':
+                        renderRules();
+                        break;
+                    case 'my-dashboard-page':
+                        renderMyDashboard();
+                        break;
+                    case 'leader-dashboard-page':
+                        renderLeaderDashboard();
+                        break;
+                    case 'players-actions-page':
+                        renderPlayersActions();
+                        break;
+                    case 'player-details-page':
+                        appState.viewingPlayerId = context.userId;
+                        renderPlayerDetails(context.userId);
+                        break;
+                    case 'quarry-page':
+                        renderQuarry();
+                        break;
+                    case 'advisory-inbox-page':
+                        renderAdvisoryInbox();
+                        break;
+                    case 'cabinet-management-page':
+                        renderCabinetManagement();
+                        break;
+                    case 'gensec-management-page':
+                        renderGenSecManagement();
+                        break;
+                    case 'governor-management-page':
+                        renderGovernorManagement();
+                        break;
+                }
+                
+                window.scrollTo(0, 0);
+            }
+
+            function detachAllListeners() {
+                for (let key in appState.listeners) {
+                    if (appState.listeners[key]) {
+                        try {
+                            appState.listeners[key](); // Unsubscribe
+                        } catch (e) {
+                            console.warn("Error detaching listener:", key, e);
+                        }
+                        appState.listeners[key] = null;
+                    }
+                }
+            }
+
             async function cacheAllUsers() {
                 try {
                     const snapshot = await usersCollection.get();
@@ -1304,100 +2377,137 @@
                     console.error("Error caching users:", error);
                 }
             }
-
-
-            // --- 4. Page Navigation & Real-time Listeners ---
-
-            function detachAllListeners() {
-                console.log("Detaching all listeners...");
-                for (let key in appState.listeners) {
-                    if (appState.listeners[key]) {
-                        appState.listeners[key](); // Unsubscribe
-                        appState.listeners[key] = null;
-                    }
-                }
-            }
-
-            function showPage(pageId, context = null) {
-                detachAllListeners();
+            
+            // Point 1: 12-Hour AM/PM Localized Time Formatting
+            function formatTimestamp(timestamp) {
+                if (!timestamp) return 'N/A';
+                const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
                 
-                // ★★★ NEW: Clear file uploads on page change ★★★
-                appState.fileToUpload = { ga: null, sa: null };
-                document.getElementById('ga-file-input').value = null;
-                document.getElementById('sa-file-input').value = null;
-
-
-                document.querySelectorAll('.page').forEach(page => {
-                    page.classList.remove('active');
+                return date.toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true // Key for 12-hour AM/PM
                 });
+            }
+            
+            function formatTimeOnly(timestamp) {
+                if (!timestamp) return 'N/A';
+                const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                
+                return date.toLocaleString(undefined, {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true // Key for 12-hour AM/PM
+                });
+            }
 
-                const targetPage = document.getElementById(pageId);
-                if (targetPage) {
-                    targetPage.classList.add('active');
-                    appState.currentPage = pageId;
+            // Point 3: Registration Dropdown Population
+            function populateCountryDropdown() {
+                const countries = [
+                    "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
+                    "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
+                    "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo, Democratic Republic of the", "Congo, Republic of the", "Costa Rica", "Cote d'Ivoire", "Croatia", "Cuba", "Cyprus", "Czech Republic",
+                    "Denmark", "Djibouti", "Dominica", "Dominican Republic",
+                    "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
+                    "Fiji", "Finland", "France",
+                    "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
+                    "Haiti", "Honduras", "Hungary",
+                    "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy",
+                    "Jamaica", "Japan", "Jordan",
+                    "Kazakhstan", "Kenya", "Kiribati", "Korea, North", "Korea, South", "Kosovo", "Kuwait", "Kyrgyzstan",
+                    "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
+                    "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar (Burma)",
+                    "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Macedonia", "Norway",
+                    "Oman",
+                    "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+                    "Qatar",
+                    "Romania", "Russia", "Rwanda",
+                    "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
+                    "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu",
+                    "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan",
+                    "Vanuatu", "Vatican City", "Venezuela", "Vietnam",
+                    "Yemen",
+                    "Zambia", "Zimbabwe"
+                ]; // Alphabetized list
+                const select = document.getElementById('reg-country');
+                select.innerHTML = '<option value="">-- Select Country --</option>' + countries.map(c => `<option value="${c}">${c}</option>`).join('');
+            }
 
-                    switch (pageId) {
-                        case 'home-page':
-                            renderHomePageButtons();
-                            renderCabinetList();
-                            break;
-                        case 'general-assembly-page':
-                            renderGeneralAssembly();
-                            renderChatControls('ga'); 
-                            break;
-                        case 'special-assembly-page':
-                            renderSpecialAssembly();
-                            renderChatControls('sa');
-                            break;
-                        case 'notice-board-page':
-                            renderNoticeBoard();
-                            break;
-                        case 'drafts-voting-page':
-                            renderDraftsVotingPage();
-                            break;
-                        case 'draft-detail-page':
-                            appState.currentDraftId = context.draftId;
-                            renderDraftDetailPage(context.draftId);
-                            break;
-                        case 'rules-page':
-                            renderRules();
-                            break;
-                        case 'leader-dashboard-page':
-                            renderLeaderDashboard();
-                            break;
-                        case 'players-actions-page':
-                            renderPlayersActions();
-                            break;
-                        case 'player-details-page':
-                            appState.viewingPlayerId = context.userId;
-                            renderPlayerDetails(context.userId);
-                            break;
-                        case 'quarry-page':
-                            renderQuarry();
-                            break;
-                        case 'advisory-inbox-page':
-                            renderAdvisoryInbox();
-                            break;
-                        case 'cabinet-management-page':
-                            renderCabinetManagement();
-                            break;
-                    }
-                    
-                    window.scrollTo(0, 0);
+            function populateLanguageDropdown(type) {
+                const select = document.getElementById('reg-lang-secondary');
+                let languages = [];
 
+                if (type === 'india') {
+                    // Point 3: 22 Official Indian Languages
+                    languages = [
+                        "Hindi", "English", "Assamese", "Bengali", "Bodo", "Dogri", "Gujarati", "Kannada", "Kashmiri", "Konkani", "Maithili", "Malayalam", "Manipuri", "Marathi", "Nepali", "Odia", "Punjabi", "Sanskrit", "Santali", "Sindhi", "Tamil", "Telugu", "Urdu"
+                    ];
                 } else {
-                    console.error(`Page not found: ${pageId}`);
-                    if (appState.currentUser) {
-                        showPage('home-page');
-                    } else {
-                        showPage('login-page');
-                    }
+                    // Point 3: Top 30 Asian Languages (default)
+                    languages = [
+                        "English", "Mandarin Chinese", "Hindi", "Urdu", "Arabic", "Malay/Indonesian", "Bengali", "Portuguese", "Russian", "Japanese", "Vietnamese", "Turkish", "Korean", "French", "German", "Thai", "Persian (Farsi)", "Filipino (Tagalog)", "Burmese", "Pashto", "Uzbek", "Sinhalese", "Khmer", "Kurdish", "Hebrew", "Nepali", "Lao", "Mongolian", "Dutch", "Italian"
+                    ];
+                }
+                select.innerHTML = languages.map(l => `<option value="${l}">${l}</option>`).join('');
+                
+                // Also populate profile page dropdown
+                const profileSelect = document.getElementById('profile-lang-secondary');
+                if (profileSelect) {
+                    profileSelect.innerHTML = languages.map(l => `<option value="${l}">${l}</option>`).join('');
                 }
             }
 
-            // --- 5. Event Listeners ---
+            function populateIndiaStatesDropdown() {
+                const states = [
+                    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+                    "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+                ];
+                const select = document.getElementById('reg-india-state');
+                select.innerHTML = '<option value="">-- Select State/UT --</option>' + states.map(s => `<option value="${s}">${s}</option>`).join('');
+            }
+            
+            // Helper for showing alerts
+            function showAlert(elementId, message, type = 'danger') {
+                const el = document.getElementById(elementId);
+                if (el) {
+                    el.textContent = message;
+                    el.className = `alert alert-${type}`;
+                    el.style.display = 'block';
+                }
+            }
+            
+            // Helper for hiding alerts
+            function hideAlert(elementId) {
+                const el = document.getElementById(elementId);
+                if (el) {
+                    el.style.display = 'none';
+                }
+            }
+            
+            // Point 7: Helper to get role icon
+            function getRoleIcon(role) {
+                if (role === 'Leader') return '👑';
+                if (role === 'Co-Leader') return '⭐';
+                return '💎';
+            }
+            
+            // Point 6: Helper for Co-Leader star
+            function getCoLeaderStar(user, cabinetIds = [], genSecId = null, governorIds = []) {
+                if (user.role !== 'Co-Leader') return '';
+                // Cabinet/Secretary gets gold star
+                if (cabinetIds.includes(user.id) || user.id === genSecId || governorIds.includes(user.id)) {
+                    return '⭐'; // Gold Star
+                }
+                return '✩'; // Silver Star
+            }
+
+                // --- 5. Event Listeners ---
 
             function attachEventListeners() {
+                // --- Global Actions ---
                 document.body.addEventListener('click', (e) => {
                     // Use `closest` for data-action to catch clicks on icons inside buttons
                     let target = e.target.closest('[data-action]');
@@ -1413,48 +2523,42 @@
                             showPage(pageId);
                         }
                         
+                        // Point 1: Rename "Back to Home" to "Back to Previous Page"
+                        // This is handled in the HTML itself. We just add the new actions here.
+                        
                         switch (action) {
+                            // Auth & Page Nav
                             case 'logout':
                                 e.preventDefault();
                                 handleLogout();
                                 break;
-                            case 'show-draft-detail':
+                            case 'show-central': // Point 5: "Central Page"
                                 e.preventDefault();
-                                showPage('draft-detail-page', { draftId: target.dataset.id });
+                                showPage('central-page');
                                 break;
-                            case 'draft-vote':
+                            case 'show-parliament': // Point 6
                                 e.preventDefault();
-                                handleDraftVote(appState.currentDraftId, target.dataset.vote);
+                                showPage('parliament-page');
                                 break;
-                            case 'activate-draft':
+                            case 'show-my-dashboard': // Point 10
                                 e.preventDefault();
-                                handleActivateLaw(target.dataset.id); // Pass ID from button
+                                if (appState.currentUser.role === 'Leader') {
+                                    showPage('leader-dashboard-page');
+                                } else {
+                                    showPage('my-dashboard-page');
+                                }
                                 break;
-                            case 'leader-delete-rule':
+                            
+                            // Chat Actions (Point 7 & 13)
+                            case 'ga-cancel-reply':
+                            case 'sa-cancel-reply':
                                 e.preventDefault();
-                                handleRemoveRule(target.dataset.id);
+                                cancelReply(action.split('-')[0]); // 'ga' or 'sa'
                                 break;
-                            case 'show-player-details':
+                            case 'chat-reply':
                                 e.preventDefault();
-                                showPage('player-details-page', { userId: target.dataset.id });
+                                setupReply(target.dataset.id, target.dataset.room);
                                 break;
-                            case 'player-action':
-                                e.preventDefault();
-                                handlePlayerAction(target.dataset.id, target.dataset.task);
-                                break;
-                            case 'acknowledge-registration':
-                                e.preventDefault();
-                                acknowledgeRegistration(target.dataset.id);
-                                break;
-                            case 'mark-advice':
-                                e.preventDefault();
-                                markAdvice(target.dataset.id, target.dataset.status);
-                                break;
-                            case 'reply-dm':
-                                e.preventDefault();
-                                handleQuarryReply(target.dataset.id);
-                                break;
-                            // ★★★ NEW: Chat Message Actions ★★★
                             case 'pin-message':
                                 e.preventDefault();
                                 handlePinMessage(target.dataset.id, target.dataset.room);
@@ -1465,35 +2569,142 @@
                                 break;
                             case 'delete-message':
                                 e.preventDefault();
-                                handleDeleteMessage(target.dataset.id, target.dataset.room);
+                                handleDeleteMessage(target.dataset.id, target.dataset.room, false); // Not forced
                                 break;
-                            // ★★★ NEW: Leader Data Export ★★★
+
+                            // Drafts & Notices (Point 9 & 10)
+                            case 'show-draft-detail':
+                                e.preventDefault();
+                                showPage('draft-detail-page', { draftId: target.dataset.id });
+                                break;
+                            case 'draft-vote':
+                                e.preventDefault();
+                                handleDraftVote(appState.currentDraftId, target.dataset.vote);
+                                break;
+                            case 'notice-react':
+                                e.preventDefault();
+                                handleNoticeReaction(target.dataset.id, target.dataset.reaction);
+                                break;
+                            case 'show-notice-advice':
+                                e.preventDefault();
+                                toggleNoticeAdviceForm(target.dataset.id);
+                                break;
+                                
+                            // Leader Actions (Point 12 & 13)
+                            case 'leader-delete-rule':
+                                e.preventDefault();
+                                handleRemoveRule(target.dataset.id, false); // Not forced
+                                break;
+                            case 'show-player-details':
+                                e.preventDefault();
+                                showPage('player-details-page', { userId: target.dataset.id });
+                                break;
+                            case 'player-action':
+                                e.preventDefault();
+                                handlePlayerAction(target.dataset.id, target.dataset.task);
+                                break;
+                            case 'acknowledge-registration': // Point 12
+                                e.preventDefault();
+                                handleAcknowledgeRegistration(target.dataset.id);
+                                break;
+                            case 'mark-advice': // Point 12
+                                e.preventDefault();
+                                markAdvice(target.dataset.id, target.dataset.status);
+                                break;
+                            case 'reply-dm': // Point 12
+                                e.preventDefault();
+                                handleQuarryReply(target.dataset.id);
+                                break;
                             case 'export-player-data':
                                 e.preventDefault();
                                 handleExportData();
+                                break;
+                            case 'remove-gensec':
+                            case 'remove-governor':
+                                e.preventDefault();
+                                handleRemoveTermLimitRole(target.dataset.id, target.dataset.role);
+                                break;
+                            // Forceful Actions (Point 13)
+                            case 'force-delete-player':
+                            case 'force-change-pass':
+                            case 'force-delete-notice':
+                            case 'force-delete-rule':
+                            case 'force-cancel-draft':
+                            case 'force-delete-message':
+                                e.preventDefault();
+                                handleForcefulAction(action);
                                 break;
                         }
                     }
                 });
 
+                // --- Form Submissions ---
+                
+                // Point 2: Login
                 document.getElementById('login-form').addEventListener('submit', handleLogin);
+                document.getElementById('show-login-form-btn').addEventListener('click', () => {
+                    document.getElementById('login-form-wrapper').style.display = 'block';
+                    document.getElementById('login-button-group').style.display = 'none';
+                });
+                document.getElementById('hide-login-form-btn').addEventListener('click', () => {
+                    document.getElementById('login-form-wrapper').style.display = 'none';
+                    document.getElementById('login-button-group').style.display = 'flex';
+                });
+
+                // Point 3: Register
                 document.getElementById('register-form').addEventListener('submit', handleRegister);
+
+                // Point 4: Profile
+                document.getElementById('profile-update-form').addEventListener('submit', handleProfileUpdate);
+                document.getElementById('password-change-form').addEventListener('submit', handlePasswordChange);
+
+                // --- Chat Forms ---
                 document.getElementById('ga-chat-form').addEventListener('submit', (e) => handleChatMessagePost(e, 'ga'));
                 document.getElementById('sa-chat-form').addEventListener('submit', (e) => handleChatMessagePost(e, 'sa'));
-                document.getElementById('new-notice-form').addEventListener('submit', handleNoticePost);
+                document.getElementById('sec-chat-form').addEventListener('submit', (e) => handleChatMessagePost(e, 'sec')); // Point 8
+                
+                // --- Item/Draft Forms ---
                 document.getElementById('draft-advice-form').addEventListener('submit', handleDraftAdvice);
                 document.getElementById('leader-chat-form').addEventListener('submit', handleLeaderChatSubmit);
-                document.getElementById('advisory-form').addEventListener('submit', handleAdvisorySubmit);
+                document.getElementById('advisory-form').addEventListener('submit', handleAdvisorySubmit); // Point 6
+
+                // --- Leader Forms ---
                 document.getElementById('create-draft-form').addEventListener('submit', handleCreateDraft);
                 document.getElementById('cabinet-management-form').addEventListener('submit', handleCabinetSave);
+                document.getElementById('new-notice-form').addEventListener('submit', handleNoticePost); // Point 12
+                document.getElementById('publish-rule-form').addEventListener('submit', handlePublishRule); // Point 12
+                document.getElementById('new-secretariat-notice-form').addEventListener('submit', handleSecretariatNoticePost); // Point 8
+                document.getElementById('gensec-management-form').addEventListener('submit', handleGenSecSave); // Point 12
+                document.getElementById('governor-management-form').addEventListener('submit', handleGovernorSave); // Point 12
+                document.getElementById('force-verify-form').addEventListener('submit', handleForceVerify); // Point 13
 
+                // --- Dynamic Listeners ---
+
+                // Point 3: Registration page logic
                 document.getElementById('reg-country').addEventListener('change', (e) => {
                     const country = e.target.value;
                     document.getElementById('india-states-group').style.display = (country === 'India') ? 'block' : 'none';
                     document.getElementById('other-region-group').style.display = (country !== 'India' && country !== '') ? 'block' : 'none';
+                    
+                    if (country === 'India') {
+                        populateLanguageDropdown('india');
+                    } else {
+                        populateLanguageDropdown('default');
+                    }
                 });
                 
-                // ★★★ NEW: File Input Listeners ★★★
+                document.getElementById('reg-india-state').addEventListener('change', (e) => {
+                    const state = e.target.value;
+                    document.getElementById('india-districts-group').style.display = (state) ? 'block' : 'none';
+                });
+
+                // --- File Input Listeners ---
+                document.getElementById('reg-profile-pic').addEventListener('change', (e) => {
+                    appState.fileToUpload.regProfile = e.target.files[0];
+                });
+                document.getElementById('profile-pic-upload').addEventListener('change', (e) => {
+                    appState.fileToUpload.profile = e.target.files[0];
+                });
                 document.getElementById('ga-file-input').addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (file) {
@@ -1508,10 +2719,383 @@
                         document.getElementById('sa-chat-input').placeholder = `File attached: ${file.name} (Press Send)`;
                     }
                 });
+                document.getElementById('advisory-file').addEventListener('change', (e) => {
+                    appState.fileToUpload.advisory = e.target.files[0];
+                });
             }
 
-            // --- 6. UI Rendering Functions (BASIC) ---
 
+            // --- 6. Authentication & Profile (Points 2, 3, 4) ---
+
+            /**
+             * Point 2: Handle Login
+             * - Checks credentials
+             * - Checks user status
+             * - Stores user in localStorage
+             * - Navigates to post-login-page
+             */
+            async function handleLogin(e) {
+                e.preventDefault();
+                const id = document.getElementById('login-id').value;
+                const password = document.getElementById('login-password').value;
+                const errorEl = document.getElementById('login-error');
+                
+                try {
+                    const userDoc = await usersCollection.doc(id).get();
+
+                    if (userDoc.exists) {
+                        const user = userDoc.data();
+                        if (user.password === password) {
+                            if (user.status !== 'active') {
+                                errorEl.textContent = `Your account is currently ${user.status}. Please contact the Leader for activation.`;
+                                errorEl.style.display = 'block';
+                                return;
+                            }
+                            
+                            appState.currentUser = user;
+                            // Point 2: Use localStorage for persistence
+                            localStorage.setItem('clanPortalUser', JSON.stringify(user)); 
+                            
+                            await cacheAllUsers();
+                            updateHeader();
+                            document.getElementById('post-login-welcome-name').textContent = `Welcome, ${appState.currentUser.name}!`;
+                            showPage('post-login-page');
+                            errorEl.style.display = 'none';
+                            document.getElementById('login-form').reset();
+                        } else {
+                            errorEl.textContent = 'Invalid Player ID or Password.';
+                            errorEl.style.display = 'block';
+                        }
+                    } else {
+                        errorEl.textContent = 'Invalid Player ID or Password.';
+                        errorEl.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error("Error logging in:", error);
+                    errorEl.textContent = 'An error occurred. Please try again.';
+                    errorEl.style.display = 'block';
+                }
+            }
+            
+            /**
+             * Point 2: Handle Logout
+             * - Clears appState
+             * - Clears localStorage
+             * - Detaches listeners and navigates to login
+             */
+            function handleLogout() {
+                appState.currentUser = null;
+                // Point 2: Clear localStorage
+                localStorage.removeItem('clanPortalUser');
+                sessionStorage.removeItem('clanPortalUser'); // Clear old session storage just in case
+                
+                detachAllListeners();
+                appState.allUsersCache = [];
+                updateHeader();
+                showPage('login-page');
+            }
+
+            /**
+             * Point 3: Handle Registration (Complete Overhaul)
+             * - Collects all new fields
+             * - Generates password
+             * - Uploads profile pic if provided
+             * - Saves ALL data to meta/main -> newRegistrations array
+             * - Does NOT create user in usersCollection (Leader must approve)
+             * - Shows success page with ID and Password
+             */
+            async function handleRegister(e) {
+                e.preventDefault();
+                const submitBtn = document.getElementById('register-submit-btn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Registering...';
+
+                try {
+                    const playerId = document.getElementById('reg-player-id').value;
+                    
+                    // Check if ID is already in meta or users collection
+                    const userDoc = await usersCollection.doc(playerId).get();
+                    const metaDoc = await metaCollection.doc('main').get();
+                    const pendingRegs = metaDoc.data()?.newRegistrations || [];
+                    
+                    if (userDoc.exists || pendingRegs.some(reg => reg.id === playerId)) {
+                        alert('Error: This Player ID is already taken or pending approval. Please choose another one.');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Register';
+                        return;
+                    }
+                    
+                    // --- Collect all data ---
+                    const country = document.getElementById('reg-country').value;
+                    let state = '';
+                    if (country === 'India') {
+                        state = document.getElementById('reg-india-state').value;
+                        if (!state) {
+                             alert('Error: Please select your State / Union Territory.');
+                             submitBtn.disabled = false;
+                             submitBtn.textContent = 'Register';
+                             return;
+                        }
+                    } else {
+                        state = document.getElementById('reg-other-region').value;
+                    }
+                    
+                    const primaryLang = document.getElementById('reg-lang-primary').value; 
+                    const secondaryLangsEl = document.getElementById('reg-lang-secondary');
+                    const secondaryLangs = [...secondaryLangsEl.selectedOptions].map(option => option.value);
+                    
+                    if (secondaryLangs.length === 0) {
+                         alert('Error: Please select at least one secondary language.');
+                         submitBtn.disabled = false;
+                         submitBtn.textContent = 'Register';
+                         return;
+                    }
+                    const allLanguages = [primaryLang, ...secondaryLangs].join(', ');
+
+                    // --- Upload Profile Pic (if exists) ---
+                    let profilePicUrl = '';
+                    if (appState.fileToUpload.regProfile) {
+                        const file = appState.fileToUpload.regProfile;
+                        const filePath = `profile-pics/${playerId}/${file.name}`;
+                        profilePicUrl = await uploadFile(file, filePath);
+                    }
+                    
+                    const newPassword = Math.floor(100000 + Math.random() * 900000).toString();
+                    
+                    const newRegistrationData = {
+                        id: playerId,
+                        name: document.getElementById('reg-player-name').value,
+                        clanName: document.getElementById('reg-clan-name').value,
+                        clanId: '', // Leader can fill this
+                        dob: document.getElementById('reg-dob').value,
+                        country: country,
+                        state: state,
+                        district: document.getElementById('reg-india-district').value || '',
+                        languages: allLanguages,
+                        password: newPassword,
+                        role: document.getElementById('reg-role').value, 
+                        status: 'pending', // User is pending, not active
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        // New optional fields
+                        profilePicUrl: profilePicUrl,
+                        nickname: document.getElementById('reg-nickname').value || '',
+                        positiveNote: document.getElementById('reg-note').value || '',
+                        mobile: document.getElementById('reg-mobile').value || ''
+                    };
+                    
+                    // Point 3: Save to newRegistrations array ONLY
+                    await metaCollection.doc('main').update({
+                        newRegistrations: firebase.firestore.FieldValue.arrayUnion(newRegistrationData)
+                    });
+                    
+                    console.log('Registration submitted for approval:', newRegistrationData.id);
+
+                    // Show success page with credentials
+                    document.getElementById('reg-success-id').textContent = newRegistrationData.id;
+                    document.getElementById('reg-success-pass').textContent = newRegistrationData.password;
+                    
+                    document.getElementById('register-form').reset();
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Register';
+                    showPage('register-success-page');
+
+                } catch (error) {
+                    console.error('Registration failed:', error);
+                    alert('An unexpected error occurred during registration. Please try again.');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Register';
+                }
+            }
+
+            /**
+             * Point 4: Render User Profile Page
+             * - Populates the form with data from appState.currentUser
+             */
+            function renderProfilePage() {
+                const user = appState.currentUser;
+                if (!user) return;
+                
+                // Set profile pic
+                document.getElementById('profile-pic-img').src = user.profilePicUrl || `https://ui-avatars.com/api/?name=${user.name.charAt(0)}&background=0D8ABC&color=fff`;
+
+                // Read-only fields
+                document.getElementById('profile-id').value = user.id;
+                document.getElementById('profile-name').value = user.name;
+                document.getElementById('profile-role').value = user.role;
+                document.getElementById('profile-country').value = user.country;
+
+                if (user.country === 'India' && user.state) {
+                    document.getElementById('profile-state').value = user.state;
+                    document.getElementById('profile-state-group').style.display = 'block';
+                } else {
+                    document.getElementById('profile-state-group').style.display = 'none';
+                }
+
+                // Editable fields
+                document.getElementById('profile-nickname').value = user.nickname || '';
+                document.getElementById('profile-note').value = user.positiveNote || '';
+                document.getElementById('profile-mobile').value = user.mobile || '';
+                
+                // Populate and select languages
+                const langSelect = document.getElementById('profile-lang-secondary');
+                // Repopulate based on user's country
+                populateLanguageDropdown(user.country === 'India' ? 'india' : 'default'); 
+                const userLangs = user.languages.split(', ').filter(l => l !== 'English');
+                
+                Array.from(langSelect.options).forEach(option => {
+                    if (userLangs.includes(option.value)) {
+                        option.selected = true;
+                    }
+                });
+                
+                // Clear any old messages
+                hideAlert('profile-update-success');
+                hideAlert('password-change-error');
+                hideAlert('password-change-success');
+            }
+
+            /**
+             * Point 4: Handle Profile Updates
+             * - Uploads new pic if present
+             * - Updates user doc in Firestore
+             * - Updates appState and localStorage
+             */
+            async function handleProfileUpdate(e) {
+                e.preventDefault();
+                const user = appState.currentUser;
+                let profilePicUrl = user.profilePicUrl; // Default to existing
+
+                try {
+                    // 1. Check for new profile pic
+                    if (appState.fileToUpload.profile) {
+                        const file = appState.fileToUpload.profile;
+                        const filePath = `profile-pics/${user.id}/${file.name}`;
+                        profilePicUrl = await uploadFile(file, filePath);
+                        appState.fileToUpload.profile = null; // Clear staging
+                        document.getElementById('profile-pic-upload').value = null;
+                        document.getElementById('profile-pic-img').src = profilePicUrl;
+                    }
+                    
+                    // 2. Get other editable fields
+                    const secondaryLangsEl = document.getElementById('profile-lang-secondary');
+                    const secondaryLangs = [...secondaryLangsEl.selectedOptions].map(option => option.value);
+                    const allLanguages = ['English', ...secondaryLangs].join(', ');
+                    
+                    const updatedData = {
+                        profilePicUrl: profilePicUrl,
+                        nickname: document.getElementById('profile-nickname').value,
+                        positiveNote: document.getElementById('profile-note').value,
+                        mobile: document.getElementById('profile-mobile').value,
+                        languages: allLanguages
+                    };
+                    
+                    // 3. Update Firestore
+                    await usersCollection.doc(user.id).update(updatedData);
+                    
+                    // 4. Update local state and storage
+                    appState.currentUser = { ...user, ...updatedData };
+                    localStorage.setItem('clanPortalUser', JSON.stringify(appState.currentUser));
+                    
+                    // 5. Update header and show success
+                    updateHeader();
+                    showAlert('profile-update-success', 'Profile updated successfully!', 'success');
+
+                } catch (error) {
+                    console.error("Error updating profile:", error);
+                    showAlert('profile-update-success', 'Error updating profile. Please try again.', 'danger');
+                }
+            }
+            
+            /**
+             * User Request: Handle Password Change
+             * - Validates matching passwords
+             * - Updates user doc in Firestore
+             * - Updates appState and localStorage
+             */
+            async function handlePasswordChange(e) {
+                e.preventDefault();
+                hideAlert('password-change-error');
+                hideAlert('password-change-success');
+                
+                const newPass = document.getElementById('profile-new-pass').value;
+                const confirmPass = document.getElementById('profile-confirm-pass').value;
+
+                if (newPass !== confirmPass) {
+                    showAlert('password-change-error', 'Passwords do not match.', 'danger');
+                    return;
+                }
+                
+                if (newPass.length < 6) {
+                    showAlert('password-change-error', 'Password must be at least 6 characters long.', 'danger');
+                    return;
+                }
+                
+                try {
+                    // 1. Update Firestore
+                    await usersCollection.doc(appState.currentUser.id).update({
+                        password: newPass
+                    });
+                    
+                    // 2. Update local state and storage
+                    appState.currentUser.password = newPass;
+                    localStorage.setItem('clanPortalUser', JSON.stringify(appState.currentUser));
+                    
+                    // 3. Show success and clear form
+                    showAlert('password-change-success', 'Password updated successfully!', 'success');
+                    document.getElementById('password-change-form').reset();
+                    
+                    // 4. Inform Leader (New for security)
+                    await dmsCollection.add({
+                        threadId: db.collection('dms').doc().id, // New thread
+                        userId: appState.currentUser.id,
+                        subject: `Security Alert: Password Changed`,
+                        message: `This is an automated message to inform the Leader that I (${appState.currentUser.name}, ID: ${appState.currentUser.id}) have changed my password.`,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        isReply: false,
+                        status: 'unread'
+                    });
+
+                } catch (error) {
+                    console.error("Error changing password:", error);
+                    showAlert('password-change-error', 'An error occurred. Please try again.', 'danger');
+                }
+            }
+
+            /**
+             * Helper: Upload File to Firebase Storage
+             * - Used by Register, Profile Update, Advice, and Chat
+             * @param {File} file - The file object to upload
+             * @param {string} filePath - The full path in storage (e.g., 'chats/ga/file.png')
+             * @returns {Promise<string>} - A promise that resolves with the downloadURL
+             */
+            function uploadFile(file, filePath) {
+                return new Promise((resolve, reject) => {
+                    const fileRef = storage.ref(filePath);
+                    const uploadTask = fileRef.put(file);
+                    
+                    uploadTask.on('state_changed', 
+                        (snapshot) => {
+                            // Can add progress bar logic here if needed
+                        }, 
+                        (error) => {
+                            // Handle unsuccessful uploads
+                            console.error("Upload failed:", error);
+                            reject(error);
+                        }, 
+                        async () => {
+                            // Handle successful uploads on complete
+                            const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+                            resolve(downloadURL);
+                        }
+                    );
+                });
+            }
+            // --- 7. UI Rendering Functions (Main Pages) ---
+
+            /**
+             * Point 5: Update Header (Logged In)
+             * - Sets profile picture, name, role, and ID
+             */
             function updateHeader() {
                 const loggedOutHeader = document.getElementById('header-logged-out');
                 const loggedInHeader = document.getElementById('header-logged-in');
@@ -1521,70 +3105,142 @@
                     loggedInHeader.style.display = 'flex';
                     
                     const user = appState.currentUser;
-                    const avatar = user.name.charAt(0).toUpperCase();
-                    document.getElementById('user-avatar').textContent = avatar;
+                    const avatarEl = document.getElementById('user-avatar');
+                    // Set profile pic or default avatar
+                    if (user.profilePicUrl) {
+                        avatarEl.innerHTML = `<img src="${user.profilePicUrl}" alt="${user.name.charAt(0)}" class="profile-avatar">`;
+                    } else {
+                        avatarEl.innerHTML = user.name.charAt(0).toUpperCase();
+                        avatarEl.style.backgroundImage = ''; // Clear any potential image
+                    }
+                    
                     document.getElementById('user-name').textContent = user.name;
                     document.getElementById('user-role').textContent = user.role;
+                    document.getElementById('user-id').textContent = user.id;
+                    
+                    // Point 10: Update Dashboard button text
+                    const dashboardBtn = document.getElementById('central-dashboard-button');
+                    if (dashboardBtn) {
+                        dashboardBtn.querySelector('h3').textContent = `${user.role} Dashboard`;
+                    }
+                    
                 } else {
                     loggedOutHeader.style.display = 'block';
                     loggedInHeader.style.display = 'none';
                 }
             }
-            function renderHomePageButtons() {
-                const grid = document.getElementById('home-buttons-grid');
-                if (!grid) return;
-                const user = appState.currentUser;
-                let buttons = `
-                    <div class="home-button" data-action="show-general-assembly">🗣 General Assembly</div>
-                    <div class="home-button" data-action="show-special-assembly">👑 Special Assembly</div>
-                    <div class="home-button" data-action="show-notice-board">📢 Notice Board</div>
-                    <div class="home-button" data-action="show-drafts-voting">⚖️ Drafts & Voting</div>
-                    <div class="home-button" data-action="show-rules">📜 Rules of Clan</div>
-                    <div class="home-button" data-action="show-leader-chat">💬 Leader Chat (DM)</div>
-                    <div class="home-button" data-action="show-advisory">🧠 Give Advice</div>
-                `;
 
-                if (user.role === 'Leader') {
-                    buttons += `
-                        <div class="home-button leader-btn" data-action="show-leader-dashboard">🛡️ Leader Dashboard</div>
-                    `;
-                }
+            /**
+             * Point 6: Render Central Page (Replaces Home)
+             * - Renders all widgets and rosters
+             * - Checks for active drafts to re-order the page
+             */
+            async function renderCentralPage() {
+                // Point 1: Localized Time
+                const now = new Date();
+                document.getElementById('central-datetime').textContent = now.toLocaleString(undefined, {
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
 
-                grid.innerHTML = buttons;
-            }
+                const metaDoc = await metaCollection.doc('main').get();
+                const metaData = metaDoc.data() || {};
+                const cabinetIds = metaData.cabinet || [];
+                const genSecId = metaData.generalSecretary?.id || null;
+                const governorIds = metaData.governors?.map(g => g.id) || [];
 
-            async function renderCabinetList() {
-                const listEl = document.getElementById('cabinet-player-list');
-                if (!listEl) return;
-                try {
-                    const metaDoc = await metaCollection.doc('main').get();
-                    const cabinetIds = metaDoc.data()?.cabinet || [];
-                    
-                    if (cabinetIds.length === 0) {
-                        listEl.innerHTML = '<span>No cabinet players assigned.</span>';
+                // Point 6, Section 3: Top Players
+                const playersListEl = document.getElementById('central-top-players-list');
+                const roleOrder = { 'Leader': 1, 'Co-Leader': 2, 'Elder': 3, 'Member': 4, 'Not Allotted': 5 };
+                const sortedUsers = [...appState.allUsersCache].sort((a, b) => roleOrder[a.role] - roleOrder[b.role]);
+                
+                playersListEl.innerHTML = sortedUsers.slice(0, 10).map(u => {
+                    let star = '';
+                    if (u.role === 'Leader') star = '👑';
+                    if (u.role === 'Co-Leader') star = getCoLeaderStar(u, cabinetIds, genSecId, governorIds);
+                    return `<div>${u.name} (${u.role}) ${star}</div>`;
+                }).join('');
+
+                // Point 6, Section 11 & 12: Rosters
+                document.getElementById('central-leader-list').innerHTML = sortedUsers.filter(u => u.role === 'Leader').map(u => u.name).join(', ') || 'N/A';
+                document.getElementById('central-coleader-list').innerHTML = sortedUsers.filter(u => u.role === 'Co-Leader').map(u => `${u.name} ${getCoLeaderStar(u, cabinetIds, genSecId, governorIds)}`).join(', ') || 'N/A';
+                document.getElementById('central-elder-list').innerHTML = sortedUsers.filter(u => u.role === 'Elder').map(u => u.name).join(', ') || 'N/A';
+                document.getElementById('central-member-list').innerHTML = sortedUsers.filter(u => u.role === 'Member' || u.role === 'Not Allotted').map(u => u.name).join(', ') || 'N/A';
+                
+                const cabinetNames = appState.allUsersCache.filter(u => cabinetIds.includes(u.id)).map(u => u.name).join(', ');
+                document.getElementById('central-cabinet-list').innerHTML = cabinetNames || 'N/A';
+                
+                const genSecName = appState.allUsersCache.find(u => u.id === genSecId)?.name;
+                document.getElementById('central-gensec-list').innerHTML = genSecName || 'N/A';
+                
+                const governorNames = appState.allUsersCache.filter(u => governorIds.includes(u.id)).map(u => u.name).join(', ');
+                document.getElementById('central-governor-list').innerHTML = governorNames || 'N/A';
+
+
+                // Point 6, Section 5: Notice Board Snippet & Badge
+                const noticeSnippetEl = document.getElementById('central-notice-snippet');
+                const noticeBadgeEl = document.getElementById('central-notice-badge');
+                appState.listeners.centralNotice = noticesCollection.orderBy('timestamp', 'desc').limit(1).onSnapshot(snapshot => {
+                    if (snapshot.empty) {
+                        noticeSnippetEl.textContent = 'No notices posted yet.';
                         return;
                     }
+                    const latestNotice = snapshot.docs[0].data();
+                    noticeSnippetEl.textContent = `Latest: ${latestNotice.title}`;
+                    
+                    // Check read status for badge
+                    const lastRead = appState.noticeReadStatus[appState.currentUser.id] || 0;
+                    if (latestNotice.timestamp.toDate().getTime() > lastRead) {
+                        noticeBadgeEl.style.display = 'flex';
+                    } else {
+                        noticeBadgeEl.style.display = 'none';
+                    }
+                });
 
-                    const cabinetUsers = appState.allUsersCache.filter(u => cabinetIds.includes(u.id));
-                    listEl.innerHTML = cabinetUsers.map(u => `<span>${u.name} (${u.role})</span>`).join('');
-
-                } catch (error) {
-                    console.error("Error rendering cabinet list:", error);
-                    listEl.innerHTML = '<span>Error loading cabinet.</span>';
-                }
+                // Point 6, Section 6: Drafts Widget & Re-ordering
+                const draftWidget = document.querySelector('.widget-drafts');
+                const draftStatusEl = document.getElementById('central-draft-status');
+                
+                // We must update draft statuses first
+                await updateAllDraftsStatus(); 
+                
+                appState.listeners.centralDrafts = draftsCollection
+                    .where('status', 'in', ['advice', 'voting'])
+                    .limit(1)
+                    .onSnapshot(snapshot => {
+                        if (snapshot.empty) {
+                            draftWidget.classList.remove('active-draft');
+                            draftStatusEl.textContent = 'No active drafts.';
+                            draftStatusEl.style.color = 'var(--color-dark-gray)';
+                        } else {
+                            const draft = snapshot.docs[0].data();
+                            draftWidget.classList.add('active-draft'); // Point 6: Add class for CSS
+                            draftStatusEl.textContent = `Active Draft: "${draft.title}" is in ${draft.status} phase!`;
+                            draftStatusEl.style.color = 'var(--color-success)';
+                        }
+                    });
             }
-            
+
             function getAvatar(user) {
-                if (!user || !user.name) return `<div class="profile-avatar avatar">?</div>`;
+                if (!user) return `<div class="profile-avatar avatar">?</div>`;
+                
+                if (user.profilePicUrl) {
+                    return `<img src="${user.profilePicUrl}" alt="${user.name.charAt(0)}" class="profile-avatar avatar">`;
+                }
                 return `<div class="profile-avatar avatar">${user.name.charAt(0).toUpperCase()}</div>`;
             }
 
             function renderPlayerList(elementId, users) {
                 const listEl = document.getElementById(elementId);
                 if (!listEl) return;
-                const roleOrder = { 'Leader': 1, 'Co-Leader': 2, 'Elder': 3, 'Member': 4 };
+                const roleOrder = { 'Leader': 1, 'Co-Leader': 2, 'Elder': 3, 'Member': 4, 'Not Allotted': 5 };
                 
-                users.sort((a, b) => roleOrder[a.role] - roleOrder[b.role]);
+                users.sort((a, b) => (roleOrder[a.role] || 5) - (roleOrder[b.role] || 5));
                 
                 listEl.innerHTML = users.map(user => `
                     <div class="player-list-item">
@@ -1597,19 +3253,21 @@
                 `).join('');
             }
             
-            // --- 7. REAL-TIME CHAT FUNCTIONS ---
+            // --- 8. REAL-TIME CHAT FUNCTIONS (Points 7, 8) ---
 
             function renderGeneralAssembly() {
                 const activeUsers = appState.allUsersCache.filter(u => u.status === 'active');
                 renderPlayerList('ga-player-list', activeUsers);
+                cancelReply('ga'); // Clear any pending reply
                 
-                // ★★★ NEW: Listen for pinned message ★★★
+                // Listen for pinned message
                 appState.listeners.pinnedGA = metaCollection.doc('main')
                     .onSnapshot((doc) => {
                         const pinnedMsgId = doc.data()?.pinnedMessageGA;
                         renderPinnedMessage('ga-pinned-message', pinnedMsgId, 'ga');
                     });
                 
+                // Listen for messages
                 appState.listeners.generalMessages = messagesCollection
                     .doc('general')
                     .collection('chats')
@@ -1626,14 +3284,16 @@
             function renderSpecialAssembly() {
                 const leadership = appState.allUsersCache.filter(u => (u.role === 'Leader' || u.role === 'Co-Leader') && u.status === 'active');
                 renderPlayerList('sa-player-list', leadership);
+                cancelReply('sa');
                 
-                // ★★★ NEW: Listen for pinned message ★★★
+                // Listen for pinned message
                 appState.listeners.pinnedSA = metaCollection.doc('main')
                     .onSnapshot((doc) => {
                         const pinnedMsgId = doc.data()?.pinnedMessageSA;
                         renderPinnedMessage('sa-pinned-message', pinnedMsgId, 'sa');
                     });
                 
+                // Listen for messages
                 appState.listeners.specialMessages = messagesCollection
                     .doc('special')
                     .collection('chats')
@@ -1647,13 +3307,83 @@
                     });
             }
 
+            /**
+             * Point 8: Render Secretariat Page
+             * - Renders notices
+             * - Renders chat
+             * - Applies strict permissions
+             */
+            function renderSecretariatPage() {
+                const user = appState.currentUser;
+                const metaDoc = metaCollection.doc('main').get();
+                
+                // Check permissions
+                metaDoc.then(doc => {
+                    const genSec = doc.data()?.generalSecretary;
+                    const isGenSec = genSec && genSec.id === user.id;
+                    const isLeader = user.role === 'Leader';
+                    
+                    const postForm = document.getElementById('secretariat-post-form');
+                    const chatForm = document.getElementById('sec-chat-form');
+                    const chatError = document.getElementById('sec-post-error');
+                    
+                    if (isLeader || isGenSec) {
+                        postForm.style.display = 'block';
+                        chatForm.style.display = 'flex';
+                        chatError.style.display = 'none';
+                    } else {
+                        postForm.style.display = 'none';
+                        chatForm.style.display = 'none';
+                        chatError.style.display = 'block';
+                    }
+                });
+
+                // Listen for notices
+                const listEl = document.getElementById('secretariat-notice-list');
+                appState.listeners.secretariatNotices = secretariatNoticesCollection
+                    .orderBy('timestamp', 'desc')
+                    .onSnapshot(snapshot => {
+                        const notices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        if (notices.length === 0) {
+                            listEl.innerHTML = '<p>No secretariat notices have been posted.</p>';
+                            return;
+                        }
+                        listEl.innerHTML = notices.map(notice => {
+                            const author = appState.allUsersCache.find(u => u.id === notice.userId);
+                            return `
+                                <div class="item-card">
+                                    <h3>${notice.title}</h3>
+                                    <p>${notice.content.replace(/\n/g, '<br>')}</p>
+                                    <div class="item-meta">
+                                        Posted by ${author ? author.name : '...'} on ${formatTimestamp(notice.timestamp)}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    });
+                
+                // Listen for chat
+                appState.listeners.secretariatMessages = secretariatMessagesCollection
+                    .orderBy('timestamp', 'asc')
+                    .limitToLast(100)
+                    .onSnapshot((snapshot) => {
+                        const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        renderMessages('sec-chat-box', messages, appState.allUsersCache, 'sec');
+                    }, (error) => {
+                        console.error("Error listening to secretariat chat:", error);
+                    });
+            }
+
             function renderChatControls(pagePrefix) {
+                if (pagePrefix === 'sec') return; // No controls for secretariat
+                
                 const container = document.getElementById(`${pagePrefix}-controls-container`);
                 if (!container) return;
 
                 const user = appState.currentUser;
                 let controlsHTML = '';
 
+                // Define colors based on role
                 const memberColors = `
                     <option value="#333333">Black</option>
                     <option value="#FFFFFF">White</option>
@@ -1691,7 +3421,7 @@
                             </select>
                         </div>
                     `;
-                } else if (user.role === 'Member' || user.role === 'Elder') {
+                } else { // Member or Elder
                     controlsHTML = `
                         <div>
                             <label for="${pagePrefix}-color-select">Color:</label>
@@ -1705,7 +3435,6 @@
                 container.innerHTML = controlsHTML;
             }
 
-            // ★★★ NEW: Render Pinned Message Bar ★★★
             async function renderPinnedMessage(elementId, messageId, room) {
                 const pinEl = document.getElementById(elementId);
                 if (!pinEl) return;
@@ -1716,7 +3445,11 @@
                 }
                 
                 try {
-                    const roomName = (room === 'ga' ? 'general' : 'special');
+                    let roomName;
+                    if (room === 'ga') roomName = 'general';
+                    else if (room === 'sa') roomName = 'special';
+                    else roomName = 'secretariat';
+
                     const msgDoc = await messagesCollection.doc(roomName).collection('chats').doc(messageId).get();
                     if (!msgDoc.exists) {
                         pinEl.style.display = 'none';
@@ -1744,7 +3477,13 @@
                 }
             }
 
-            // ★★★ HEAVILY MODIFIED: renderMessages Function ★★★
+            /**
+             * Point 7: Render Chat Messages (Heavy Modifications)
+             * - Implements me/other alignment
+             * - Implements reply/quote blocks
+             * - Implements role icons
+             * - Implements 12-hour timestamp
+             */
             function renderMessages(boxId, messages, users, room) {
                 const box = document.getElementById(boxId);
                 if (!box) return;
@@ -1771,12 +3510,13 @@
                     
                     const style = `color: ${color}; font-family: ${font}; font-weight: ${fontWeight}; text-shadow: ${textShadow};`;
 
-                    const timestamp = msg.timestamp?.toDate ? msg.timestamp.toDate() : new Date();
+                    // Point 1: Use 12-hour format
+                    const timestamp = formatTimestamp(msg.timestamp);
 
-                    // Check if message is from "me" or "other"
+                    // Point 7: Check if message is from "me" or "other"
                     const meOrOther = (msg.userId === appState.currentUser.id) ? 'me' : 'other';
 
-                    // Media Content
+                    // Point 7: Media Content
                     let mediaHTML = '';
                     if (msg.type === 'image') {
                         mediaHTML = `<div class="message-media"><img src="${msg.url}" alt="Image" onclick="window.open('${msg.url}')"></div>`;
@@ -1786,49 +3526,245 @@
                         mediaHTML = `<div class="message-media"><a href="${msg.url}" target="_blank" class="message-media-download">Download File</a></div>`;
                     }
                     
-                    // Leader actions
-                    let leaderActions = '';
-                    if (appState.currentUser.role === 'Leader') {
-                        leaderActions = `
-                            <button class_:"btn-icon" data-action="pin-message" data-id="${msg.id}" data-room="${room}" title="Pin">📌</button>
-                            <button class_:"btn-icon" data-action="delete-message" data-id="${msg.id}" data-room="${room}" title="Delete">🗑️</button>
+                    // Point 7: Reply Block
+                    let replyHTML = '';
+                    if (msg.replyTo) {
+                        const originalMsg = messages.find(m => m.id === msg.replyTo.id) || msg.replyTo; // Find in cache or use stored snippet
+                        const originalUser = users.find(u => u.id === originalMsg.userId);
+                        
+                        replyHTML = `
+                            <div class="message-reply">
+                                <div class="message-reply-user">${originalUser ? originalUser.name : '...'}</div>
+                                <div class="message-reply-text">${originalMsg.text ? originalMsg.text.substring(0, 75) + '...' : (originalMsg.type || 'Media')}</div>
+                            </div>
                         `;
                     }
 
+                    // Point 7 & 13: Actions (Reply, Pin, Delete)
+                    let messageActions = `
+                        <button class="btn-icon btn-icon-reply" data-action="chat-reply" data-id="${msg.id}" data-room="${room}" title="Reply">↩️</button>
+                    `;
+                    if (appState.currentUser.role === 'Leader') {
+                        messageActions += `
+                            <button class="btn-icon" data-action="pin-message" data-id="${msg.id}" data-room="${room}" title="Pin">📌</button>
+                            <button class="btn-icon" data-action="delete-message" data-id="${msg.id}" data-room="${room}" title="Delete">🗑️</button>
+                        `;
+                    }
+
+                    // Point 7: Role Icons
+                    const roleIcon = getRoleIcon(user.role);
+
                     return `
-                        <div class="chat-message ${roleClass} ${meOrOther}">
+                        <div class="chat-message ${roleClass} ${meOrOther}" data-message-id="${msg.id}">
                             ${getAvatar(user)}
                             <div class="message-content">
-                                <div class="message-sender">${user.name} ${user.role === 'Leader' ? '👑' : (user.role === 'Co-Leader' ? '⭐' : '')}</div>
+                                <div class="message-sender">${user.name} <span class="role-icon">${roleIcon}</span></div>
+                                ${replyHTML}
                                 ${msg.text ? `<div class="message-text" style="${style}">${msg.text}</div>` : ''}
                                 ${mediaHTML}
-                                <div class="message-timestamp">${timestamp.toLocaleString()}</div>
+                                <div class="message-timestamp">${timestamp}</div>
                             </div>
                             <div class="message-actions">
-                                ${leaderActions}
+                                ${messageActions}
                             </div>
                         </div>
                     `;
                 }).join('');
+                
+                // Scroll to bottom
                 box.scrollTop = box.scrollHeight;
             }
             
+            /**
+             * Point 7: Set up a message reply
+             */
+            async function setupReply(messageId, room) {
+                let roomName;
+                if (room === 'ga') roomName = 'general';
+                else if (room === 'sa') roomName = 'special';
+                else if (room === 'sec') roomName = 'secretariat';
+                else return;
+                
+                try {
+                    // Fetch the full message to reply to
+                    const msgDoc = await messagesCollection.doc(roomName).collection('chats').doc(messageId).get();
+                    if (!msgDoc.exists) return;
+                    
+                    const msg = msgDoc.data();
+                    const user = appState.allUsersCache.find(u => u.id === msg.userId);
+                    
+                    // Store reply info in state
+                    appState.currentReply[room] = {
+                        id: messageId,
+                        userId: msg.userId,
+                        text: msg.text,
+                        type: msg.type
+                    };
+                    
+                    // Show reply preview bar
+                    const previewEl = document.getElementById(`${room}-reply-preview`);
+                    if (previewEl) {
+                        document.getElementById(`${room}-reply-user`).textContent = user ? user.name : '...';
+                        document.getElementById(`${room}-reply-text`).textContent = msg.text ? msg.text.substring(0, 100) + '...' : (msg.type || 'Media');
+                        previewEl.style.display = 'block';
+                        document.getElementById(`${room}-chat-input`).focus();
+                    }
+                    
+                } catch (error) {
+                    console.error("Error setting up reply:", error);
+                }
+            }
+
+            /**
+             * Point 7: Cancel a message reply
+             */
+            function cancelReply(room) {
+                appState.currentReply[room] = null;
+                const previewEl = document.getElementById(`${room}-reply-preview`);
+                if (previewEl) {
+                    previewEl.style.display = 'none';
+                }
+            }
+
+            /**
+             * Handle Chat Message Post (Modified for Points 7, 8)
+             * - Handles file uploads
+             * - Handles permissions
+             * - Handles sending replies
+             */
+            async function handleChatMessagePost(e, pagePrefix) {
+                e.preventDefault();
+                const input = document.getElementById(`${pagePrefix}-chat-input`);
+                const text = input.value.trim();
+                const file = appState.fileToUpload[pagePrefix];
+                
+                // Get reply data
+                const replyData = appState.currentReply[pagePrefix];
+                
+                if (!text && !file) return; // Don't send empty messages
+
+                const user = appState.currentUser;
+                
+                // --- Permission Checks ---
+                if (pagePrefix === 'sa' && !['Leader', 'Co-Leader'].includes(user.role)) {
+                    // Point 12: Governors can also post
+                    const metaDoc = await metaCollection.doc('main').get();
+                    const governors = metaDoc.data()?.governors || [];
+                    if (!governors.some(g => g.id === user.id)) {
+                        document.getElementById('sa-post-error').style.display = 'block';
+                        return;
+                    }
+                }
+                document.getElementById('sa-post-error').style.display = 'none';
+
+                if (pagePrefix === 'sec') {
+                    // Point 8: Secretariat permissions
+                    const metaDoc = await metaCollection.doc('main').get();
+                    const genSec = metaDoc.data()?.generalSecretary;
+                    if (user.role !== 'Leader' && (!genSec || genSec.id !== user.id)) {
+                        return; // Should be blocked by UI, but double-check
+                    }
+                }
+
+                // --- Get Styling ---
+                let color = '#333333'; 
+                let font = "'Poppins', sans-serif"; 
+
+                if (pagePrefix !== 'sec') {
+                    if (user.role === 'Leader') {
+                        color = document.getElementById(`${pagePrefix}-color-picker`).value;
+                        font = document.getElementById(`${pagePrefix}-font-select`).value;
+                    } else if (user.role === 'Co-Leader' || user.role === 'Member' || user.role === 'Elder') {
+                        const colorSelect = document.getElementById(`${pagePrefix}-color-select`);
+                        if (colorSelect) {
+                            color = colorSelect.value;
+                        }
+                    }
+                }
+
+                // --- Build Message Object ---
+                const message = {
+                    userId: appState.currentUser.id,
+                    text: text,
+                    color: color,
+                    font: font,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    type: 'text',
+                    url: null,
+                    replyTo: replyData // Point 7: Add reply data
+                };
+                
+                // --- Clear Inputs ---
+                input.value = '';
+                appState.fileToUpload[pagePrefix] = null;
+                if (document.getElementById(`${pagePrefix}-file-input`)) {
+                    document.getElementById(`${pagePrefix}-file-input`).value = null;
+                }
+                input.placeholder = 'Type your message...';
+                cancelReply(pagePrefix); // Point 7: Clear reply preview
+
+
+                try {
+                    // --- Handle File Upload ---
+                    if (file) {
+                        const fileType = file.type.split('/')[0]; // 'image', 'video'
+                        const filePath = `chat/${pagePrefix}/${Date.now()}_${file.name}`;
+                        
+                        input.placeholder = 'Uploading file...';
+                        input.disabled = true; // Disable input during upload
+                        
+                        const downloadURL = await uploadFile(file, filePath);
+                        
+                        message.url = downloadURL;
+                        if (fileType === 'image') message.type = 'image';
+                        else if (fileType === 'video') message.type = 'video';
+                        else message.type = 'file';
+                        
+                        // Now add the message to Firestore
+                        await addMessageToDb(pagePrefix, message);
+                        input.placeholder = 'Type your message...';
+                        input.disabled = false;
+                        
+                    } else {
+                        // --- Just Send Text Message ---
+                        await addMessageToDb(pagePrefix, message);
+                    }
+                } catch (error) {
+                    console.error("Error sending message:", error);
+                    input.placeholder = 'Error sending. Try again.';
+                    input.disabled = false;
+                }
+            }
+
+            async function addMessageToDb(pagePrefix, message) {
+                try {
+                    let collectionRef;
+                    if (pagePrefix === 'ga') {
+                        collectionRef = messagesCollection.doc('general').collection('chats');
+                    } else if (pagePrefix === 'sa') {
+                        collectionRef = messagesCollection.doc('special').collection('chats');
+                    } else if (pagePrefix === 'sec') {
+                        collectionRef = secretariatMessagesCollection; // Point 8
+                    }
+                    await collectionRef.add(message);
+                } catch (error) {
+                    console.error("Error adding message to DB:", error);
+                }
+            }
+            // --- 9. Notices, Rules, & Advice (Points 6, 9, 12) ---
+
+            /**
+             * Point 9: Render Notice Board
+             * - Shows new UI with reactions and advice
+             * - Marks notices as "read" on view
+             */
             function renderNoticeBoard() {
                 const listEl = document.getElementById('notice-list');
-                const formEl = document.getElementById('notice-board-post-form');
-                if (!listEl || !formEl) return;
+                if (!listEl) return;
+                
+                // Mark latest notice as read
+                appState.noticeReadStatus[appState.currentUser.id] = new Date().getTime();
 
-                // Show post form only for cabinet members
-                metaCollection.doc('main').get().then(doc => {
-                    const cabinetIds = doc.data()?.cabinet || [];
-                    if (cabinetIds.includes(appState.currentUser.id)) {
-                        formEl.style.display = 'block';
-                    } else {
-                        formEl.style.display = 'none';
-                    }
-                }).catch(error => console.error("Error getting cabinet status:", error));
-
-                // Notices के लिए Real-time listener
                 appState.listeners.notices = noticesCollection
                     .orderBy('timestamp', 'desc')
                     .onSnapshot(snapshot => {
@@ -1841,31 +3777,242 @@
                         
                         listEl.innerHTML = notices.map(notice => {
                             const author = appState.allUsersCache.find(u => u.id === notice.userId);
-                            const timestamp = notice.timestamp?.toDate ? notice.timestamp.toDate() : new Date();
+                            const reactions = notice.reactions || {};
+                            const myId = appState.currentUser.id;
+                            
+                            // Helper to check if I reacted
+                            const iReacted = (reaction) => reactions[reaction] && reactions[reaction].includes(myId);
+
                             return `
                                 <div class="item-card">
                                     <h3>${notice.title}</h3>
                                     <p>${notice.content.replace(/\n/g, '<br>')}</p>
                                     <div class="item-meta">
-                                        Posted by ${author ? author.name : 'Unknown'} on ${timestamp.toLocaleDateString()}
+                                        Posted by ${author ? author.name : '...'} on ${formatTimestamp(notice.timestamp)}
+                                    </div>
+                                    
+                                    <div class="notice-actions">
+                                        <button class="reaction-btn ${iReacted('yes') ? 'reacted' : ''}" data-action="notice-react" data-id="${notice.id}" data-reaction="yes">
+                                            ✅ Yes (${reactions.yes?.length || 0})
+                                        </button>
+                                        <button class="reaction-btn ${iReacted('no') ? 'reacted' : ''}" data-action="notice-react" data-id="${notice.id}" data-reaction="no">
+                                            ❌ No (${reactions.no?.length || 0})
+                                        </button>
+                                        <button class="reaction-btn ${iReacted('like') ? 'reacted' : ''}" data-action="notice-react" data-id="${notice.id}" data-reaction="like">
+                                            👍 (${reactions.like?.length || 0})
+                                        </button>
+                                        <button class="reaction-btn ${iReacted('love') ? 'reacted' : ''}" data-action="notice-react" data-id="${notice.id}" data-reaction="love">
+                                            ❤️ (${reactions.love?.length || 0})
+                                        </button>
+                                        <button class="btn btn-secondary btn-sm" data-action="show-notice-advice" data-id="${notice.id}" style="margin-left: auto;">
+                                            Give Advice
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="notice-advice-form" id="notice-advice-form-${notice.id}" style="display: none;">
+                                        <form data-action="submit-notice-advice" data-id="${notice.id}">
+                                            <div class="form-group">
+                                                <label>Your Advice</label>
+                                                <textarea class="form-control" required></textarea>
+                                                <small id="notice-advice-limit-${notice.id}"></small>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary btn-sm">Submit Advice</button>
+                                        </form>
                                     </div>
                                 </div>
                             `;
                         }).join('');
+                        
+                        // Attach advice form listeners
+                        listEl.querySelectorAll('form[data-action="submit-notice-advice"]').forEach(form => {
+                            form.addEventListener('submit', (e) => handleNoticeAdviceSubmit(e, form.dataset.id));
+                        });
+                        
                     }, error => console.error("Error listening to notices:", error));
             }
+
+            /**
+             * Point 9: Handle Notice Reaction
+             * - Adds/removes user ID from the reaction array in Firestore
+             */
+            async function handleNoticeReaction(noticeId, reaction) {
+                const noticeRef = noticesCollection.doc(noticeId);
+                const myId = appState.currentUser.id;
+                const fieldKey = `reactions.${reaction}`; // e.g., "reactions.like"
+
+                try {
+                    const doc = await noticeRef.get();
+                    const reactions = doc.data().reactions || {};
+                    const reactionArray = reactions[reaction] || [];
+
+                    if (reactionArray.includes(myId)) {
+                        // User already reacted, remove reaction
+                        await noticeRef.update({
+                            [fieldKey]: firebase.firestore.FieldValue.arrayRemove(myId)
+                        });
+                    } else {
+                        // User has not reacted, add reaction
+                        await noticeRef.update({
+                            [fieldKey]: firebase.firestore.FieldValue.arrayUnion(myId)
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error reacting to notice:", error);
+                }
+            }
+
+            /**
+             * Point 9: Toggle Notice Advice Form & Check Rate Limit
+             */
+            async function toggleNoticeAdviceForm(noticeId) {
+                const formEl = document.getElementById(`notice-advice-form-${noticeId}`);
+                if (formEl.style.display === 'block') {
+                    formEl.style.display = 'none';
+                    return;
+                }
+                
+                // Check rate limit before showing
+                const role = appState.currentUser.role;
+                let limit = 1;
+                if (role === 'Elder') limit = 3;
+                if (role === 'Co-Leader') limit = 5;
+                if (role === 'Leader') limit = 999; // (Unlimited)
+
+                const adviceSubCol = noticesCollection.doc(noticeId).collection('advice');
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // Start of today
+
+                const snapshot = await adviceSubCol
+                    .where('userId', '==', appState.currentUser.id)
+                    .where('timestamp', '>=', today)
+                    .get();
+
+                const adviceCount = snapshot.size;
+                const limitEl = document.getElementById(`notice-advice-limit-${noticeId}`);
+                
+                if (adviceCount >= limit) {
+                    limitEl.textContent = `You have reached your daily advice limit for this notice (${adviceCount}/${limit}).`;
+                    limitEl.style.color = 'red';
+                    formEl.querySelector('button').disabled = true;
+                } else {
+                    limitEl.textContent = `You have ${limit - adviceCount} submission(s) remaining today.`;
+                    limitEl.style.color = 'var(--color-dark-gray)';
+                    formEl.querySelector('button').disabled = false;
+                }
+                
+                formEl.style.display = 'block';
+            }
             
+            async function handleNoticeAdviceSubmit(e, noticeId) {
+                e.preventDefault();
+                const textarea = e.target.querySelector('textarea');
+                const adviceText = textarea.value;
+                if (!adviceText) return;
+
+                // Re-check rate limit on submit
+                const role = appState.currentUser.role;
+                let limit = 1;
+                if (role === 'Elder') limit = 3;
+                if (role === 'Co-Leader') limit = 5;
+                if (role === 'Leader') limit = 999;
+
+                const adviceSubCol = noticesCollection.doc(noticeId).collection('advice');
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); 
+
+                const snapshot = await adviceSubCol
+                    .where('userId', '==', appState.currentUser.id)
+                    .where('timestamp', '>=', today)
+                    .get();
+
+                if (snapshot.size >= limit) {
+                    alert("You have exceeded your advice limit for today.");
+                    return;
+                }
+
+                try {
+                    await adviceSubCol.add({
+                        userId: appState.currentUser.id,
+                        name: appState.currentUser.name,
+                        text: adviceText,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    textarea.value = '';
+                    toggleNoticeAdviceForm(noticeId); // Hide form on success
+                    
+                } catch (error) {
+                    console.error("Error submitting notice advice:", error);
+                    alert("Error submitting advice.");
+                }
+            }
+            
+            /**
+             * Point 12: Handle Notice Post (From Leader Dashboard)
+             */
+            async function handleNoticePost(e) {
+                e.preventDefault();
+                const title = document.getElementById('notice-title').value;
+                const content = document.getElementById('notice-content').value;
+
+                try {
+                    const newNoticeRef = await noticesCollection.add({
+                        userId: appState.currentUser.id,
+                        title: title,
+                        content: content,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        reactions: {}, // Point 9: Init reactions
+                    });
+                    
+                    // Point 9: Also add to notifications for "My Dashboard"
+                    await createNotification(
+                        `New Notice: ${title}`, 
+                        `A new notice has been posted by ${appState.currentUser.name}.`,
+                        'all' // Send to everyone
+                    );
+                    
+                    document.getElementById('new-notice-form').reset();
+                    showPage('leader-dashboard-page');
+                } catch (error) {
+                    console.error("Error posting notice:", error);
+                }
+            }
+            
+            /**
+             * Point 8: Handle Secretariat Notice Post
+             */
+            async function handleSecretariatNoticePost(e) {
+                e.preventDefault();
+                const title = document.getElementById('secretariat-notice-title').value;
+                const content = document.getElementById('secretariat-notice-content').value;
+                
+                try {
+                    await secretariatNoticesCollection.add({
+                        userId: appState.currentUser.id,
+                        title: title,
+                        content: content,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    document.getElementById('new-secretariat-notice-form').reset();
+                } catch (error) {
+                    console.error("Error posting secretariat notice:", error);
+                }
+            }
+
+            /**
+             * Point 9: Render Rules Page (Parchment UI)
+             */
             function renderRules() {
                 const listEl = document.getElementById('rules-list');
                 if (!listEl) return;
                 
                 appState.listeners.rules = rulesCollection
-                    .orderBy('activatedAt', 'asc') // नए रूल्स नीचे आएँगे
+                    .orderBy('activatedAt', 'asc')
                     .onSnapshot(snapshot => {
                         const rules = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
                         if (rules.length === 0) {
-                            listEl.innerHTML = '<p>No clan rules have been activated yet.</p>';
+                            listEl.innerHTML = '<p style="text-align: center;">No clan rules have been activated yet.</p>';
                             return;
                         }
                         
@@ -1880,389 +4027,132 @@
                         `).join('');
                     }, error => console.error("Error listening to rules:", error));
             }
-
-            function renderLeaderDashboard() {
-                const listEl = document.getElementById('new-registrations-list');
-                if (!listEl) return;
-                
-                // 'meta' collection में 'main' document से 'newRegistrations' सुनें
-                appState.listeners.newRegistrations = metaCollection.doc('main')
-                    .onSnapshot(doc => {
-                        if (!doc.exists) {
-                            console.error("Meta document does not exist.");
-                            return;
-                        }
-                        const newRegistrations = doc.data()?.newRegistrations || [];
-                        
-                        if (newRegistrations.length === 0) {
-                            listEl.innerHTML = '<p>No new registrations.</p>';
-                            return;
-                        }
-                        
-                        listEl.innerHTML = newRegistrations.map(reg => {
-                            return `
-                                <div class="item-card">
-                                    <p><b>Name:</b> ${reg.name} (<b>Role:</b> ${reg.role})</p>
-                                    <p><b>ID:</b> ${reg.id}</p>
-                                    <p><b>Password:</b> ${reg.password}</p>
-                                    <p><b>Country:</b> ${reg.country} (${reg.state || 'N/A'})</p>
-                                    <p><b>Languages:</b> ${reg.languages}</p>
-                                    <button class="btn btn-success btn-sm" data-action="acknowledge-registration" data-id="${reg.id}">Acknowledge</button>
-                                </div>
-                            `;
-                        }).join('');
-                    }, error => console.error("Error listening to new registrations:", error));
-            }
-
-            async function renderPlayersActions() {
-                const bodyEl = document.getElementById('players-actions-table-body');
-                if (!bodyEl) return;
-                
-                try {
-                    const snapshot = await usersCollection.orderBy('name', 'asc').get();
-                    const users = snapshot.docs.map(doc => doc.data());
-                    appState.allUsersCache = users; // Cache को अपडेट करें
-
-                    bodyEl.innerHTML = users.map(user => {
-                        const joinedDate = user.createdAt?.toDate ? user.createdAt.toDate() : new Date();
-                        return `
-                            <tr>
-                                <td>
-                                    <b>${user.name}</b><br>
-                                    <small>${user.id}</small>
-                                </td>
-                                <td>${user.password}</td>
-                                <td>
-                                    <select class="form-control" data-action="player-action-select" data-task="role" data-id="${user.id}" ${user.role === 'Leader' ? 'disabled' : ''}>
-                                        <option value="Member" ${user.role === 'Member' ? 'selected' : ''}>Member</option>
-                                        <option value="Elder" ${user.role === 'Elder' ? 'selected' : ''}>Elder</option>
-                                        <option value="Co-Leader" ${user.role === 'Co-Leader' ? 'selected' : ''}>Co-Leader</option>
-                                        <option value="Leader" ${user.role === 'Leader' ? 'selected' : ''}>Leader</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    <span style="font-weight: 600; text-transform: capitalize; color: ${user.status === 'active' ? 'green' : 'red'};">${user.status}</span>
-                                </td>
-                                <td>${joinedDate.toLocaleDateString()}</td>
-                                <td>
-                                    <button class="btn btn-primary btn-sm" data-action="show-player-details" data-id="${user.id}">Details</button>
-                                    ${user.role !== 'Leader' ? `
-                                        <button class="btn btn-secondary btn-sm" data-action="player-action" data-task="suspend" data-id="${user.id}">Suspend</button>
-                                        <button class="btn btn-warning btn-sm" data-action="player-action" data-task="ban" data-id="${user.id}">Ban</button>
-                                        <button class="btn btn-danger btn-sm" data-action="player-action" data-task="delete" data-id="${user.id}">Delete</button>
-                                    ` : ''}
-                                    ${user.status !== 'active' ? `
-                                        <button class="btn btn-success btn-sm" data-action="player-action" data-task="reactivate" data-id="${user.id}">Reactivate</button>
-                                    ` : ''}
-                                </td>
-                            </tr>
-                        `
-                    }).join('');
-                    
-                    bodyEl.querySelectorAll('select[data-action="player-action-select"]').forEach(select => {
-                        select.addEventListener('change', (e) => {
-                            handlePlayerAction(e.target.dataset.id, 'role', e.target.value);
-                        });
-                    });
-
-                } catch (error) {
-                    console.error("Error rendering player actions:", error);
-                    bodyEl.innerHTML = `<tr><td colspan="6">Error loading players.</td></tr>`;
-                }
-            }
             
-            async function renderPlayerDetails(userId) {
-                const user = appState.allUsersCache.find(u => u.id === userId);
-                if (!user) {
-                    showPage('players-actions-page');
-                    return;
-                }
-
-                document.getElementById('player-detail-name').textContent = user.name;
-                const joinedDate = user.createdAt?.toDate ? user.createdAt.toDate() : new Date();
+            /**
+             * Point 12: Handle Direct Rule Publish (Leader)
+             */
+            async function handlePublishRule(e) {
+                e.preventDefault();
+                const title = document.getElementById('rule-title').value;
+                const description = document.getElementById('rule-description').value;
                 
-                document.getElementById('player-detail-info').innerHTML = `
-                    <p><strong>Player ID:</strong> ${user.id}</p>
-                    <p><strong>Role:</strong> ${user.role}</p>
-                    <p><strong>Status:</strong> ${user.status}</p>
-                    <p><strong>Clan:</strong> ${user.clanName} (${user.clanId})</p>
-                    <p><strong>From:</strong> ${user.state ? user.state + ', ' : ''}${user.country}</p>
-                    <p><strong>Languages:</strong> ${user.languages}</p>
-                    <p><strong>Joined:</strong> ${joinedDate.toLocaleString()}</p>
-                `;
-                
-                const activityEl = document.getElementById('player-detail-activity');
-                activityEl.innerHTML = '<p>Loading activity...</p>';
-                let activity = [];
-
-                try {
-                    const gaMsgs = await messagesCollection.doc('general').collection('chats').where('userId', '==', userId).limit(20).get();
-                    gaMsgs.docs.forEach(m => {
-                        const data = m.data();
-                        let content = data.text;
-                        if(data.type) content = `[${data.type}]`;
-                        activity.push({ time: data.timestamp.toDate(), text: `[General] ${content}` });
-                    });
-                    
-                    const saMsgs = await messagesCollection.doc('special').collection('chats').where('userId', '==', userId).limit(20).get();
-                    saMsgs.docs.forEach(m => {
-                        const data = m.data();
-                        let content = data.text;
-                        if(data.type) content = `[${data.type}]`;
-                        activity.push({ time: data.timestamp.toDate(), text: `[Special] ${content}` });
-                    });
-
-                    const dms = await dmsCollection.where('userId', '==', userId).limit(20).get();
-                    dms.docs.forEach(m => {
-                        const data = m.data();
-                        activity.push({ time: data.timestamp.toDate(), text: `[DM to Leader] ${data.subject}: ${data.message}` });
-                    });
-                    
-                    const advice = await adviceCollection.where('userId', '==', userId).limit(20).get();
-                    advice.docs.forEach(m => {
-                        const data = m.data();
-                        activity.push({ time: data.timestamp.toDate(), text: `[Advice] ${data.subject}: ${data.message}` });
-                    });
-                    
-                    activity.sort((a, b) => b.time - a.time);
-                    
-                    if (activity.length === 0) {
-                        activityEl.innerHTML = '<p>No activity recorded.</p>';
-                    } else {
-                        activityEl.innerHTML = activity.map(a => `
-                            <div class="advice-item">
-                                <small>${a.time.toLocaleString()}</small>
-                                <p>${a.text}</p>
-                            </div>
-                        `).join('');
-                    }
-                } catch (error) {
-                    console.error("Error loading player activity:", error);
-                    activityEl.innerHTML = '<p>Error loading activity.</p>';
-                }
-            }
-
-            function renderQuarry() {
-                const listEl = document.getElementById('quarry-list');
-                if (!listEl) return;
-                
-                appState.listeners.dms = dmsCollection
-                    .orderBy('timestamp', 'desc')
-                    .onSnapshot(snapshot => {
-                        const allDMs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        const threads = {};
-
-                        allDMs.forEach(dm => {
-                            const threadId = dm.threadId || dm.id;
-                            if (!threads[threadId]) {
-                                threads[threadId] = [];
-                            }
-                            threads[threadId].push(dm);
-                        });
-
-                        const sortedThreadIds = Object.keys(threads).sort((a, b) => {
-                            const lastMsgA = threads[a].reduce((latest, msg) => msg.timestamp.toDate() > latest ? msg.timestamp.toDate() : latest, new Date(0));
-                            const lastMsgB = threads[b].reduce((latest, msg) => msg.timestamp.toDate() > latest ? msg.timestamp.toDate() : latest, new Date(0));
-                            return lastMsgB - lastMsgA;
-                        });
-
-                        if (sortedThreadIds.length === 0) {
-                            listEl.innerHTML = '<p>Your inbox is empty.</p>';
-                            return;
-                        }
-
-                        listEl.innerHTML = sortedThreadIds.map(threadId => {
-                            const threadMessages = threads[threadId].sort((a, b) => a.timestamp.toDate() - b.timestamp.toDate());
-                            const firstDM = threadMessages[0];
-                            const sender = appState.allUsersCache.find(u => u.id === firstDM.userId);
-
-                            return `
-                                <div class="item-card">
-                                    <h3>${firstDM.subject}</h3>
-                                    <div class="item-meta">
-                                        From: ${sender ? sender.name : 'Unknown'}
-                                    </div>
-                                    
-                                    <div class="advice-section" style="padding-left: 15px; border-left: 3px solid #eee;">
-                                        ${threadMessages.map(dm => {
-                                            const isReply = dm.userId === appState.currentUser.id;
-                                            const timestamp = dm.timestamp.toDate();
-                                            return `
-                                                <div class="advice-item">
-                                                    <p>${dm.message}</p>
-                                                    <small><b>${isReply ? 'Your Reply' : (sender ? sender.name : 'Their') + ' Message'}:</b> ${timestamp.toLocaleString()}</small>
-                                                </div>
-                                            `
-                                        }).join('')}
-                                    </div>
-                                    
-                                    <form class="reply-dm-form" style="margin-top: 15px;">
-                                        <textarea id="reply-dm-${firstDM.id}" class="form-control" placeholder="Type your reply..."></textarea>
-                                        <button type="button" class="btn btn-primary btn-sm" style="margin-top: 5px;" data-action="reply-dm" data-id="${firstDM.id}">Send Reply</button>
-                                    </form>
-                                </div>
-                            `;
-                        }).join('');
-                    }, error => console.error("Error listening to DMs:", error));
-            }
-            
-            function renderAdvisoryInbox() {
-                const listEl = document.getElementById('advisory-inbox-list');
-                if (!listEl) return;
-                
-                appState.listeners.advice = adviceCollection
-                    .orderBy('timestamp', 'desc')
-                    .onSnapshot(snapshot => {
-                        const adviceItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                        if (adviceItems.length === 0) {
-                            listEl.innerHTML = '<p>No advice submitted.</p>';
-                            return;
-                        }
-                        
-                        listEl.innerHTML = adviceItems.map(item => {
-                            const sender = appState.allUsersCache.find(u => u.id === item.userId);
-                            const timestamp = item.timestamp.toDate();
-                            return `
-                                <div class="item-card">
-                                    <h3>${item.subject} (Status: ${item.status})</h3>
-                                    <div class="item-meta">
-                                        From: ${sender ? sender.name : 'Unknown'} on ${timestamp.toLocaleString()}
-                                    </div>
-                                    <p>${item.message}</p>
-                                    <div style="margin-top: 10px;">
-                                        <button class="btn btn-success btn-sm" data-action="mark-advice" data-id="${item.id}" data-status="Applied">Mark as Applied</button>
-                                        <button class="btn btn-warning btn-sm" data-action="mark-advice" data-id="${item.id}" data-status="Considered">Mark as Considered</button>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('');
-                    }, error => console.error("Error listening to advice inbox:", error));
-            }
-
-            async function renderCabinetManagement() {
-                const optionsEl = document.getElementById('cabinet-player-options');
-                if (!optionsEl) return;
-                
-                const eligible = appState.allUsersCache.filter(u => (u.role === 'Co-Leader' || u.role === 'Elder') && u.status === 'active');
-                
-                if (eligible.length === 0) {
-                    optionsEl.innerHTML = '<p>No Co-Leaders or Elders available to add to the cabinet.</p>';
+                if (!confirm('Are you sure you want to publish this rule directly, bypassing all votes?')) {
                     return;
                 }
                 
                 try {
-                    const metaDoc = await metaCollection.doc('main').get();
-                    const cabinetIds = metaDoc.data()?.cabinet || [];
-
-                    optionsEl.innerHTML = eligible.map(user => `
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="${user.id}" id="cab-${user.id}"
-                                ${cabinetIds.includes(user.id) ? 'checked' : ''}>
-                            <label class="form-check-label" for="cab-${user.id}">
-                                ${user.name} (${user.role})
-                            </label>
-                        </div>
-                    `).join('');
+                    // 1. Add to Rules collection
+                    await rulesCollection.add({
+                        title: title,
+                        description: description,
+                        activatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    // 2. Post a Notice about it
+                    await noticesCollection.add({
+                        userId: appState.currentUser.id, 
+                        title: `New Rule Published (Direct): ${title}`,
+                        content: `The Leader has published a new rule directly.\n\n${description}`,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        reactions: {}
+                    });
+                    
+                    // 3. Send notification
+                    await createNotification(
+                        `New Rule: ${title}`,
+                        `The Leader published a new rule directly.`,
+                        'all'
+                    );
+                    
+                    alert('Rule has been published and a notice has been posted.');
+                    document.getElementById('publish-rule-form').reset();
+                    showPage('leader-dashboard-page');
+                    
                 } catch (error) {
-                    console.error("Error rendering cabinet management:", error);
-                    optionsEl.innerHTML = '<p>Error loading cabinet options.</p>';
+                    console.error("Error publishing rule:", error);
+                    alert("Error publishing rule.");
                 }
             }
             
-            async function updateAllDraftsStatus() {
-                const now = new Date();
-                
-                const draftsToUpdateQuery = draftsCollection
-                    .where('status', 'in', ['advice', 'voting']);
+            async function handleRemoveRule(ruleId, isForced) {
+                if (!isForced) {
+                    if (!confirm('Are you sure you want to permanently delete this rule? This action is final.')) {
+                        return;
+                    }
+                }
                 
                 try {
-                    const snapshot = await draftsToUpdateQuery.get();
-                    if (snapshot.empty) {
-                        return; // कोई काम नहीं है
-                    }
-
-                    const batch = db.batch();
-                    
-                    snapshot.docs.forEach(doc => {
-                        const draft = { id: doc.id, ...doc.data() };
-                        const draftRef = draftsCollection.doc(draft.id);
-
-                        const adviceEnds = draft.adviceEndsAt.toDate();
-                        const votingEnds = draft.votingEndsAt.toDate();
-
-                        if (draft.status === 'advice' && now > adviceEnds) {
-                            batch.update(draftRef, { status: 'voting' });
-                        }
-                        
-                        else if (draft.status === 'voting' && now > votingEnds) {
-                            const { newStatus, newSummary } = tallyVotes(draft); 
-                            batch.update(draftRef, { 
-                                status: newStatus, 
-                                resultSummary: newSummary 
-                            });
-                        }
-                    });
-
-                    await batch.commit();
-
+                    await rulesCollection.doc(ruleId).delete();
+                    if (isForced) alert('Rule forcefully deleted.');
                 } catch (error) {
-                    console.error("Error updating draft statuses:", error);
+                    console.error("Error removing rule:", error);
+                }
+            }
+
+            // --- 10. DRAFTS & VOTING (Point 10 Overhaul) ---
+
+            /**
+             * Point 10, Step 1: Create Draft
+             * - Sets up 5h advice, 8h voting, 5h results timers
+             */
+            async function handleCreateDraft(e) {
+                e.preventDefault();
+                const title = document.getElementById('draft-title').value;
+                const description = document.getElementById('draft-description').value;
+                
+                const now = new Date(); 
+                const fiveHours = 5 * 60 * 60 * 1000;
+                const eightHours = 8 * 60 * 60 * 1000;
+                const total18Hours = (5 + 8 + 5) * 60 * 60 * 1000;
+                
+                const adviceEnds = new Date(now.getTime() + fiveHours);
+                const votingEnds = new Date(adviceEnds.getTime() + eightHours);
+                const resultsEnds = new Date(votingEnds.getTime() + fiveHours); // Point 10, Step 7
+                
+                try {
+                    const newDraftRef = await draftsCollection.add({
+                        title: title,
+                        description: description,
+                        status: 'advice', // Start in advice phase
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        adviceEndsAt: adviceEnds, 
+                        votingEndsAt: votingEnds,
+                        resultsEndsAt: resultsEnds, // New timestamp
+                        advice: [],
+                        votes: [],
+                        resultSummary: ''
+                    });
+                    
+                    // Point 10, Step 2: Auto-post to chats
+                    const draftLink = `Draft: "${title}"\n\nA new draft has been published for the 18-hour process. Please review and participate.`;
+                    
+                    // Post to General
+                    await addMessageToDb('ga', {
+                        userId: appState.currentUser.id, text: draftLink,
+                        color: '#b8860b', font: "'Times New Roman', serif",
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        type: 'text', url: null, replyTo: null
+                    });
+                    // Post to Special
+                    await addMessageToDb('sa', {
+                        userId: appState.currentUser.id, text: draftLink,
+                        color: '#b8860b', font: "'Times New Roman', serif",
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        type: 'text', url: null, replyTo: null
+                    });
+                    
+                    alert('Draft published! The 18-hour process (5h advice) has begun. Messages posted to assemblies.');
+                    document.getElementById('create-draft-form').reset();
+                    showPage('drafts-voting-page');
+                } catch (error) {
+                    console.error("Error creating draft:", error);
+                    alert('Error creating draft.');
                 }
             }
             
-            function tallyVotes(draft) {
-                if (!draft || !['voting', 'advice'].includes(draft.status)) {
-                    return { newStatus: draft.status, newSummary: draft.resultSummary }; 
-                }
-
-                let yesVotes = 0;
-                let noVotes = 0;
-                let absentVotes = 0;
-                
-                const activeUsers = appState.allUsersCache.filter(u => u.status === 'active');
-                if (activeUsers.length === 0) {
-                    return { newStatus: 'canceled', newSummary: 'Draft Canceled: No active users found.' };
-                }
-
-                const totalPossibleWeightedVotes = activeUsers.reduce((acc, user) => acc + (user.role === 'Leader' ? 3 : 1), 0);
-                
-                (draft.votes || []).forEach(v => {
-                    if (v.vote === 'yes') yesVotes += v.weight;
-                    if (v.vote === 'no') noVotes += v.weight;
-                    if (v.vote === 'absent') absentVotes += v.weight;
-                });
-
-                const votedUserIds = (draft.votes || []).map(v => v.userId);
-                activeUsers.forEach(user => {
-                    if (!votedUserIds.includes(user.id)) {
-                        absentVotes += (user.role === 'Leader' ? 3 : 1);
-                    }
-                });
-
-                let newStatus = draft.status;
-                let newSummary = draft.resultSummary;
-
-                if (totalPossibleWeightedVotes === 0) {
-                     newStatus = 'canceled';
-                     newSummary = 'Draft Canceled: No voters eligible.';
-                }
-                else if (absentVotes / totalPossibleWeightedVotes >= (1/3)) {
-                    newStatus = 'canceled';
-                    newSummary = `Draft Canceled: ${((absentVotes / totalPossibleWeightedVotes) * 100).toFixed(1)}% of players were absent.`;
-                }
-                else if (yesVotes > (yesVotes + noVotes) / 2) {
-                    newStatus = 'passed_pending_activation';
-                    newSummary = `Draft Passed!\nYes: ${yesVotes}\nNo: ${noVotes}\nAbsent: ${absentVotes}`;
-                }
-                else {
-                    newStatus = 'failed';
-                    newSummary = `Draft Failed.\nYes: ${yesVotes}\nNo: ${noVotes}\nAbsent: ${absentVotes}`;
-                }
-                
-                return { newStatus, newSummary };
-            }
-
+            /**
+             * Point 10: Render Drafts List Page
+             */
             function renderDraftsVotingPage() {
                 updateAllDraftsStatus().then(() => {
                     const listEl = document.getElementById('drafts-list');
@@ -2279,26 +4169,13 @@
                             }
                             
                             listEl.innerHTML = drafts.map(draft => {
-                                let statusText = '';
-                                const adviceEnds = draft.adviceEndsAt?.toDate();
-                                const votingEnds = draft.votingEndsAt?.toDate();
-
-                                switch (draft.status) {
-                                    case 'advice': statusText = `Status: Advice Phase (ends ${adviceEnds?.toLocaleTimeString()})`; break;
-                                    case 'voting': statusText = `Status: Voting Phase (ends ${votingEnds?.toLocaleTimeString()})`; break;
-                                    case 'passed_pending_activation': statusText = 'Status: Passed, Awaiting Leader Activation'; break;
-                                    case 'active': statusText = 'Status: Activated as Law'; break;
-                                    case 'failed': statusText = 'Status: Failed'; break;
-                                    case 'canceled': statusText = 'Status: Canceled (High Abstention)'; break;
-                                    default: statusText = `Status: ${draft.status}`;
-                                }
-
+                                let statusText = `Status: ${draft.status.replace('_', ' ')}`;
                                 return `
                                     <div class="item-card">
                                         <h3>${draft.title}</h3>
                                         <div class="item-meta">${statusText}</div>
                                         <p>${(draft.description || "").substring(0, 150)}...</p>
-                                        <button class="btn btn-primary" data-action="show-draft-detail" data-id="${draft.id}">View Details & Vote</button>
+                                        <button class="btn btn-primary" data-action="show-draft-detail" data-id="${draft.id}">View Details</button>
                                     </div>
                                 `;
                             }).join('');
@@ -2306,6 +4183,40 @@
                 });
             }
             
+            // Helper for countdown timers
+            function startCountdown(element, endTime) {
+                if (appState.listeners[element.id]) {
+                    clearInterval(appState.listeners[element.id]); // Clear old interval
+                }
+
+                function updateTimer() {
+                    const now = new Date().getTime();
+                    const distance = endTime.getTime() - now;
+
+                    if (distance < 0) {
+                        clearInterval(appState.listeners[element.id]);
+                        element.textContent = "This phase has ended.";
+                        // Re-render the whole page to show the next phase
+                        if (appState.currentPage === 'draft-detail-page') {
+                             renderDraftDetailPage(appState.currentDraftId);
+                        }
+                        return;
+                    }
+
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                    element.textContent = `Time remaining: ${hours}h ${minutes}m ${seconds}s`;
+                }
+
+                updateTimer(); // Run once immediately
+                appState.listeners[element.id] = setInterval(updateTimer, 1000);
+            }
+
+            /**
+             * Point 10: Render Draft Detail Page (Phases)
+             */
             function renderDraftDetailPage(draftId) {
                 updateAllDraftsStatus().then(() => {
                     appState.listeners.draftDetail = draftsCollection.doc(draftId)
@@ -2325,75 +4236,73 @@
                             const adviceSection = document.getElementById('draft-advice-section');
                             const votingSection = document.getElementById('draft-voting-section');
                             const resultsSection = document.getElementById('draft-results-section');
-                            const activationSection = document.getElementById('draft-leader-activation-section');
+                            const resultTimerEl = document.getElementById('draft-result-timer');
+                            const autoActivateNote = document.getElementById('draft-auto-activation-note');
                             
-                            [adviceSection, votingSection, resultsSection, activationSection, timerEl].forEach(el => {
+                            [adviceSection, votingSection, resultsSection, timerEl, resultTimerEl, autoActivateNote].forEach(el => {
                                 if (el) el.style.display = 'none';
                             });
                             
                             statusEl.className = 'draft-status-bar'; 
                             const adviceEnds = draft.adviceEndsAt.toDate();
                             const votingEnds = draft.votingEndsAt.toDate();
+                            const resultsEnds = draft.resultsEndsAt.toDate(); // Point 10
 
                             if (draft.status === 'advice') {
-                                statusEl.textContent = 'Advice Phase';
+                                statusEl.textContent = 'Advice Phase (5 Hours)';
                                 statusEl.classList.add('status-advice');
-                                timerEl.textContent = `Advice phase ends at: ${adviceEnds.toLocaleString()}`;
                                 timerEl.style.display = 'block';
+                                startCountdown(timerEl, adviceEnds);
                                 adviceSection.style.display = 'block';
                                 
                                 const adviceListEl = document.getElementById('draft-advice-list');
-                                if (draft.advice.length === 0) {
+                                if (!draft.advice || draft.advice.length === 0) {
                                     adviceListEl.innerHTML = '<p>No advice submitted yet.</p>';
                                 } else {
-                                    adviceListEl.innerHTML = (draft.advice || []).map(a => {
+                                    adviceListEl.innerHTML = draft.advice.map(a => {
                                         const user = appState.allUsersCache.find(u => u.id === a.userId);
-                                        const timestamp = a.timestamp.toDate();
                                         return `
                                             <div class="advice-item">
                                                 <p>${a.text}</p>
-                                                <small class="advice-sender">by ${user ? user.name : 'Unknown'} on ${timestamp.toLocaleString()}</small>
+                                                <small class="advice-sender">by ${user ? user.name : '...'} on ${formatTimestamp(a.timestamp)}</small>
                                             </div>
                                         `;
-                                    }).join('');
+                                    }).sort((a,b) => b.timestamp - a.timestamp).join('');
                                 }
                             } 
                             else if (draft.status === 'voting') {
-                                statusEl.textContent = 'Voting Phase';
+                                statusEl.textContent = 'Voting Phase (8 Hours)';
                                 statusEl.classList.add('status-voting');
-                                timerEl.textContent = `Voting ends at: ${votingEnds.toLocaleString()}`;
                                 timerEl.style.display = 'block';
+                                startCountdown(timerEl, votingEnds);
 
                                 const userVote = (draft.votes || []).find(v => v.userId === appState.currentUser.id);
                                 if (userVote) {
                                     votingSection.style.display = 'block';
                                     votingSection.innerHTML = `<div class="alert alert-success">You have voted: <strong>${userVote.vote.toUpperCase()}</strong></div>`;
                                 } else {
+                                    // Reset/show voting buttons
                                     votingSection.style.display = 'block';
                                     const voteErrorEl = document.getElementById('draft-vote-error');
-                                    if (!voteErrorEl) {
-                                        votingSection.innerHTML = `
-                                            <h3>Cast Your Vote</h3>
-                                            <div id="draft-vote-error" class="alert alert-danger" style="display: none;"></div>
-                                            <div class="vote-options">
-                                                <button class="btn btn-success" data-action="draft-vote" data-vote="yes">✅ Yes</button>
-                                                <button class="btn btn-danger" data-action="draft-vote" data-vote="no">❌ No</button>
-                                                <button class="btn btn-secondary" data-action="draft-vote" data-vote="absent">⚪ Absent</button>
-                                            </div>
-                                        `;
+                                    if (voteErrorEl.style.display !== 'none') {
+                                         voteErrorEl.style.display = 'none';
                                     }
+                                    votingSection.querySelector('.vote-options').style.display = 'flex';
                                 }
                             }
                             else { 
+                                // Point 10, Step 7: Results Phase (or final state)
                                 resultsSection.style.display = 'block';
                                 document.getElementById('draft-vote-summary').textContent = draft.resultSummary || 'Results are being tallied.';
                                 
-                                if (draft.status === 'passed_pending_activation') {
-                                    statusEl.textContent = 'Passed - Awaiting Activation';
-                                    statusEl.classList.add('status-passed');
-                                    if (appState.currentUser.role === 'Leader') {
-                                        activationSection.style.display = 'block';
-                                        document.getElementById('draft-activate-btn').dataset.id = draft.id;
+                                if (draft.status === 'results') {
+                                    statusEl.textContent = 'Results Phase (5 Hours)';
+                                    statusEl.classList.add('status-results');
+                                    resultTimerEl.style.display = 'block';
+                                    startCountdown(resultTimerEl, resultsEnds);
+                                    
+                                    if (draft.resultSummary.startsWith('Draft Passed!')) {
+                                        autoActivateNote.style.display = 'block';
                                     }
                                 } else if (draft.status === 'failed') {
                                     statusEl.textContent = 'Failed';
@@ -2409,394 +4318,6 @@
 
                         }, error => console.error("Error listening to draft detail:", error));
                 });
-            }
-            
-            async function handleLogin(e) {
-                e.preventDefault();
-                const id = document.getElementById('login-id').value;
-                const password = document.getElementById('login-password').value;
-                const errorEl = document.getElementById('login-error');
-                
-                try {
-                    const userDoc = await usersCollection.doc(id).get();
-
-                    if (userDoc.exists) {
-                        const user = userDoc.data();
-                        if (user.password === password) {
-                            if (user.status !== 'active') {
-                                errorEl.textContent = `Your account is currently ${user.status}. Please contact the Leader.`;
-                                errorEl.style.display = 'block';
-                                return;
-                            }
-                            
-                            appState.currentUser = user;
-                            sessionStorage.setItem('clanPortalUser', JSON.stringify(user)); 
-                            await cacheAllUsers(); // लॉगिन के बाद सभी यूज़र्स को कैश करें
-                            updateHeader();
-                            showPage('home-page');
-                            errorEl.style.display = 'none';
-                            document.getElementById('login-form').reset();
-                        } else {
-                            errorEl.textContent = 'Invalid Player ID or Password.';
-                            errorEl.style.display = 'block';
-                        }
-                    } else {
-                        errorEl.textContent = 'Invalid Player ID or Password.';
-                        errorEl.style.display = 'block';
-                    }
-                } catch (error) {
-                    console.error("Error logging in:", error);
-                    errorEl.textContent = 'An error occurred. Please try again.';
-                    errorEl.style.display = 'block';
-                }
-            }
-            
-            function handleLogout() {
-                appState.currentUser = null;
-                sessionStorage.removeItem('clanPortalUser');
-                detachAllListeners(); // लॉगआउट पर सभी listeners बंद करें
-                appState.allUsersCache = []; // Cache खाली करें
-                updateHeader();
-                showPage('login-page');
-            }
-
-            async function handleRegister(e) {
-                e.preventDefault();
-                console.log('Registration attempt started...');
-                
-                const playerId = document.getElementById('reg-player-id').value;
-                
-                try {
-                    const userDoc = await usersCollection.doc(playerId).get();
-                    if (userDoc.exists) {
-                        alert('Error: This Player ID is already taken. Please choose another one.');
-                        return;
-                    }
-                    
-                    const country = document.getElementById('reg-country').value;
-                    let state = '';
-                    if (country === 'India') {
-                        state = document.getElementById('reg-india-state').value;
-                    } else {
-                        state = document.getElementById('reg-other-region').value;
-                    }
-                    
-                    const primaryLang = document.getElementById('reg-lang-primary').value; 
-                    const secondaryLangsEl = document.getElementById('reg-lang-secondary');
-                    const secondaryLangs = [...secondaryLangsEl.selectedOptions].map(option => option.value);
-                    
-                    if (secondaryLangs.length === 0) {
-                         alert('Error: Please select at least one secondary language.');
-                         return;
-                    }
-                    const allLanguages = [primaryLang, ...secondaryLangs].join(', ');
-
-                    const newPassword = Math.floor(10000 + Math.random() * 90000).toString();
-                    
-                    const newUser = {
-                        id: playerId,
-                        name: document.getElementById('reg-player-name').value,
-                        clanName: document.getElementById('reg-clan-name').value,
-                        clanId: document.getElementById('reg-clan-id').value,
-                        dob: document.getElementById('reg-dob').value,
-                        country: country,
-                        state: state,
-                        languages: allLanguages,
-                        password: newPassword,
-                        role: document.getElementById('reg-role').value, 
-                        status: 'active',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp() // सर्वर टाइम
-                    };
-
-                    await usersCollection.doc(newUser.id).set(newUser);
-                    
-                    const newRegData = {
-                        id: newUser.id,
-                        name: newUser.name,
-                        password: newUser.password,
-                        country: newUser.country,
-                        state: newUser.state,
-                        role: newUser.role,
-                        languages: newUser.languages
-                    };
-
-                    await metaCollection.doc('main').update({
-                        newRegistrations: firebase.firestore.FieldValue.arrayUnion(newRegData)
-                    });
-                    
-                    console.log('Registration successful for user:', newUser.id);
-
-                    alert(
-                        'Registration Successful!\n\n' +
-                        'Your account has been created and is now active.\n' +
-                        'Your login details are:\n\n' +
-                        `Player ID: ${newUser.id}\n` +
-                        `Password: ${newUser.password}\n\n` +
-                        'Please save this password. It is also visible to the Clan Leader.'
-                    );
-                    
-                    document.getElementById('register-form').reset();
-                    showPage('login-page');
-
-                } catch (error) {
-                    console.error('Registration failed:', error);
-                    alert('An unexpected error occurred during registration. Please try again.');
-                }
-            }
-            
-            async function acknowledgeRegistration(userId) {
-                try {
-                    const metaDoc = await metaCollection.doc('main').get();
-                    if (!metaDoc.exists) return;
-                    const newRegistrations = metaDoc.data()?.newRegistrations || [];
-                    
-                    const updatedRegistrations = newRegistrations.filter(reg => reg.id !== userId);
-
-                    await metaCollection.doc('main').update({
-                        newRegistrations: updatedRegistrations
-                    });
-
-                } catch (error) {
-                    console.error("Error acknowledging registration:", error);
-                }
-            }
-            
-            // ★★★ MODIFIED: handleChatMessagePost for file upload ★★★
-            async function handleChatMessagePost(e, pagePrefix) {
-                e.preventDefault();
-                const input = document.getElementById(`${pagePrefix}-chat-input`);
-                const text = input.value.trim();
-                const file = appState.fileToUpload[pagePrefix];
-                
-                if (!text && !file) return; // Don't send empty messages
-
-                const user = appState.currentUser;
-                
-                if (pagePrefix === 'sa' && !['Leader', 'Co-Leader'].includes(user.role)) {
-                    document.getElementById('sa-post-error').style.display = 'block';
-                    return;
-                }
-                document.getElementById('sa-post-error').style.display = 'none';
-
-                let color = '#333333'; 
-                let font = "'Poppins', sans-serif"; 
-
-                if (user.role === 'Leader') {
-                    color = document.getElementById(`${pagePrefix}-color-picker`).value;
-                    font = document.getElementById(`${pagePrefix}-font-select`).value;
-                } else if (user.role === 'Co-Leader' || user.role === 'Member' || user.role === 'Elder') {
-                    const colorSelect = document.getElementById(`${pagePrefix}-color-select`);
-                    if (colorSelect) {
-                        color = colorSelect.value;
-                    }
-                }
-
-                const message = {
-                    userId: appState.currentUser.id,
-                    text: text,
-                    color: color,
-                    font: font,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    type: 'text',
-                    url: null,
-                };
-                
-                // Clear inputs
-                input.value = '';
-                appState.fileToUpload[pagePrefix] = null;
-                document.getElementById(`${pagePrefix}-file-input`).value = null;
-                input.placeholder = 'Type your message...';
-
-
-                try {
-                    // Handle file upload first
-                    if (file) {
-                        const fileType = file.type.split('/')[0]; // 'image', 'video'
-                        const filePath = `chat/${pagePrefix}/${Date.now()}_${file.name}`;
-                        const fileRef = storage.ref(filePath);
-                        
-                        // Show uploading status
-                        input.placeholder = 'Uploading file...';
-                        
-                        const uploadTask = fileRef.put(file);
-                        
-                        uploadTask.on('state_changed', 
-                            (snapshot) => {
-                                // Progress
-                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                                input.placeholder = `Uploading... ${Math.round(progress)}%`;
-                            }, 
-                            (error) => {
-                                // Error
-                                console.error("Upload failed:", error);
-                                alert("File upload failed.");
-                                input.placeholder = 'Type your message...';
-                            }, 
-                            async () => {
-                                // Success
-                                const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
-                                message.url = downloadURL;
-                                if (fileType === 'image') message.type = 'image';
-                                else if (fileType === 'video') message.type = 'video';
-                                else message.type = 'file';
-                                
-                                // Now add the message to Firestore
-                                await addMessageToDb(pagePrefix, message);
-                                input.placeholder = 'Type your message...';
-                            }
-                        );
-                    } else {
-                        // Just send text message
-                        await addMessageToDb(pagePrefix, message);
-                    }
-                } catch (error) {
-                    console.error("Error sending message:", error);
-                }
-            }
-
-            async function addMessageToDb(pagePrefix, message) {
-                try {
-                    const chatDocRef = messagesCollection.doc(pagePrefix === 'ga' ? 'general' : 'special');
-                    await chatDocRef.collection('chats').add(message);
-                } catch (error) {
-                    console.error("Error adding message to DB:", error);
-                }
-            }
-
-            async function handleNoticePost(e) {
-                e.preventDefault();
-                const title = document.getElementById('notice-title').value;
-                const content = document.getElementById('notice-content').value;
-
-                try {
-                    await noticesCollection.add({
-                        userId: appState.currentUser.id,
-                        title: title,
-                        content: content,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    
-                    document.getElementById('new-notice-form').reset();
-                } catch (error) {
-                    console.error("Error posting notice:", error);
-                }
-            }
-            
-            async function handleLeaderChatSubmit(e) {
-                e.preventDefault();
-                const subject = document.getElementById('leader-chat-subject').value;
-                const message = document.getElementById('leader-chat-message').value;
-
-                try {
-                    const newDMRef = dmsCollection.doc();
-                    await newDMRef.set({
-                        id: newDMRef.id, 
-                        threadId: newDMRef.id, 
-                        userId: appState.currentUser.id,
-                        subject: subject,
-                        message: message,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        isReply: false
-                    });
-                    
-                    alert('Your private message has been sent to the Leader.');
-                    document.getElementById('leader-chat-form').reset();
-                    showPage('home-page');
-                } catch (error) {
-                    console.error("Error sending DM:", error);
-                }
-            }
-            
-            async function handleQuarryReply(dmId) {
-                const message = document.getElementById(`reply-dm-${dmId}`).value;
-                if (!message) return;
-                
-                try {
-                    const originalDM = await dmsCollection.doc(dmId).get();
-                    if (!originalDM.exists) {
-                        alert("Error: Could not find original message.");
-                        return;
-                    }
-                    const threadId = originalDM.data().threadId;
-
-                    await dmsCollection.add({
-                        threadId: threadId, 
-                        userId: appState.currentUser.id, 
-                        subject: `Re: ${originalDM.data().subject}`,
-                        message: message,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        isReply: true
-                    });
-                    
-                } catch (error) {
-                    console.error("Error replying to DM:", error);
-                }
-            }
-
-            async function handleAdvisorySubmit(e) {
-                e.preventDefault();
-                const subject = document.getElementById('advisory-subject').value;
-                const message = document.getElementById('advisory-message').value;
-
-                try {
-                    await adviceCollection.add({
-                        userId: appState.currentUser.id,
-                        subject: subject,
-                        message: message,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        status: 'Submitted'
-                    });
-                    
-                    alert('Your advice has been sent to the Leader.');
-                    document.getElementById('advisory-form').reset();
-                    showPage('home-page');
-                } catch (error) {
-                    console.error("Error submitting advice:", error);
-                }
-            }
-            
-            async function markAdvice(adviceId, status) {
-                try {
-                    await adviceCollection.doc(adviceId).update({
-                        status: status
-                    });
-                } catch (error) {
-                    console.error("Error marking advice:", error);
-                }
-            }
-
-            async function handleCreateDraft(e) {
-                e.preventDefault();
-                const title = document.getElementById('draft-title').value;
-                const description = document.getElementById('draft-description').value;
-                
-                const now = new Date(); 
-                const fiveHours = 5 * 60 * 60 * 1000;
-                const eightHours = 8 * 60 * 60 * 1000;
-                
-                const adviceEnds = new Date(now.getTime() + fiveHours);
-                const votingEnds = new Date(now.getTime() + fiveHours + eightHours);
-                
-                try {
-                    await draftsCollection.add({
-                        title: title,
-                        description: description,
-                        status: 'advice',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        adviceEndsAt: adviceEnds, 
-                        votingEndsAt: votingEnds,
-                        advice: [],
-                        votes: [],
-                        resultSummary: ''
-                    });
-                    
-                    alert('Draft published! The 5-hour advice phase has begun.');
-                    document.getElementById('create-draft-form').reset();
-                    showPage('drafts-voting-page');
-                } catch (error) {
-                    console.error("Error creating draft:", error);
-                    alert('Error creating draft.');
-                }
             }
             
             async function handleDraftAdvice(e) {
@@ -2830,15 +4351,14 @@
                     const draft = doc.data();
 
                     if ((draft.votes || []).some(v => v.userId === appState.currentUser.id)) {
-                        document.getElementById('draft-vote-error').textContent = 'You have already voted on this draft.';
-                        document.getElementById('draft-vote-error').style.display = 'block';
+                        showAlert('draft-vote-error', 'You have already voted on this draft.', 'danger');
                         return;
                     }
                     
                     const newVote = {
                         userId: appState.currentUser.id,
                         vote: vote,
-                        weight: appState.currentUser.role === 'Leader' ? 3 : 1,
+                        weight: appState.currentUser.role === 'Leader' ? 3 : 1, // Leader vote = 3
                         timestamp: new Date()
                     };
 
@@ -2846,97 +4366,759 @@
                         votes: firebase.firestore.FieldValue.arrayUnion(newVote)
                     });
                     
+                    // Hide buttons, show success (will be handled by snapshot listener)
+                    
                 } catch (error) {
                     console.error("Error casting vote:", error);
+                    showAlert('draft-vote-error', 'Error casting vote. Please try again.', 'danger');
                 }
             }
             
-            async function handleActivateLaw(draftId) {
-                const draftRef = draftsCollection.doc(draftId);
+            /**
+             * Point 10: Tally Votes (Modified Logic)
+             * - Pass: Yes > 50% of (Yes + No)
+             * - Cancel: Absent >= 33% of *all active clan members*
+             */
+            function tallyVotes(draft) {
+                let yesVotes = 0;
+                let noVotes = 0;
+                let absentVotes = 0;
                 
-                try {
-                    const draftDoc = await draftRef.get();
-                    if (!draftDoc.exists) return;
-                    const draft = draftDoc.data();
+                const activeUsers = appState.allUsersCache.filter(u => u.status === 'active');
+                if (activeUsers.length === 0) {
+                    return { newStatus: 'canceled', newSummary: 'Draft Canceled: No active users found.' };
+                }
+
+                // Calculate total possible weighted votes from ALL active users
+                const totalPossibleWeightedVotes = activeUsers.reduce((acc, user) => acc + (user.role === 'Leader' ? 3 : 1), 0);
+                
+                const votedUserIds = (draft.votes || []).map(v => v.userId);
+                
+                activeUsers.forEach(user => {
+                    const vote = (draft.votes || []).find(v => v.userId === user.id);
+                    const weight = (user.role === 'Leader' ? 3 : 1);
                     
-                    if (draft.status !== 'passed_pending_activation') return;
+                    if (!vote || vote.vote === 'absent') {
+                        absentVotes += weight;
+                    } else if (vote.vote === 'yes') {
+                        yesVotes += weight;
+                    } else if (vote.vote === 'no') {
+                        noVotes += weight;
+                    }
+                });
 
-                    await draftRef.update({ status: 'active' });
+                let newStatus = 'failed'; // Default to failed
+                let newSummary = '';
+                const totalVotesCast = yesVotes + noVotes;
+                const absentPercentage = (absentVotes / totalPossibleWeightedVotes) * 100;
 
+                if (absentPercentage >= 33.33) { // Point 10, Step 6
+                    newStatus = 'canceled';
+                    newSummary = `Draft Canceled: High Abstention.\nAbsent: ${absentVotes} (${absentPercentage.toFixed(1)}%)\nYes: ${yesVotes}\nNo: ${noVotes}`;
+                }
+                else if (totalVotesCast === 0) {
+                    newStatus = 'failed';
+                    newSummary = `Draft Failed: No "Yes" or "No" votes were cast.\nAbsent: ${absentVotes}\nYes: 0\nNo: 0`;
+                }
+                else if (yesVotes > (totalVotesCast / 2)) { // Point 10, Step 6
+                    newStatus = 'results'; // Move to "results" phase first
+                    newSummary = `Draft Passed!\nYes: ${yesVotes}\nNo: ${noVotes}\nAbsent: ${absentVotes}`;
+                }
+                else {
+                    newStatus = 'results'; // Move to "results" phase first
+                    newSummary = `Draft Failed.\nYes: ${yesVotes}\nNo: ${noVotes}\nAbsent: ${absentVotes}`;
+                }
+                
+                return { newStatus, newSummary };
+            }
+            
+            /**
+             * Point 10, Step 8: Auto-Activate Law
+             * - Called by updateAllDraftsStatus
+             */
+            async function activateLaw(draftId, draft) {
+                try {
+                    // 1. Update draft status to 'active'
+                    await draftsCollection.doc(draftId).update({ status: 'active' });
+
+                    // 2. Add to Rules collection
                     await rulesCollection.add({
                         title: draft.title,
                         description: draft.description,
                         activatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     
+                    // 3. Post a Notice about it
                     await noticesCollection.add({
-                        userId: appState.currentUser.id, 
+                        userId: 'SYSTEM', // Automated system
                         title: `New Rule Activated: ${draft.title}`,
-                        content: `The draft "${draft.title}" has been passed and is now an official clan rule.\n\n${draft.description}`,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        content: `The draft "${draft.title}" has passed the 18-hour process and is now an official clan rule.\n\n${draft.description}`,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        reactions: {}
                     });
                     
-                    alert('Law has been activated and added to the Rules of Clan. A notice has been posted.');
+                    // 4. Send notification
+                    await createNotification(
+                        `New Rule: ${draft.title}`,
+                        `The draft "${draft.title}" has passed and is now law.`,
+                        'all'
+                    );
+                    
+                    console.log(`Draft ${draftId} automatically activated as law.`);
                 } catch (error) {
-                    console.error("Error activating law:", error);
+                    console.error("Error auto-activating law:", error);
+                }
+            }
+
+
+            /**
+             * Point 10: Main background task to update draft statuses
+             */
+            async function updateAllDraftsStatus() {
+                const now = new Date();
+                
+                // Get all drafts that are not in a final state
+                const draftsToUpdateQuery = draftsCollection
+                    .where('status', 'in', ['advice', 'voting', 'results']);
+                
+                try {
+                    const snapshot = await draftsToUpdateQuery.get();
+                    if (snapshot.empty) {
+                        return; // No work to do
+                    }
+
+                    const batch = db.batch();
+                    
+                    for (const doc of snapshot.docs) {
+                        const draft = { id: doc.id, ...doc.data() };
+                        const draftRef = draftsCollection.doc(draft.id);
+
+                        const adviceEnds = draft.adviceEndsAt.toDate();
+                        const votingEnds = draft.votingEndsAt.toDate();
+                        const resultsEnds = draft.resultsEndsAt.toDate();
+
+                        // 1. Check for Advice -> Voting transition
+                        if (draft.status === 'advice' && now > adviceEnds) {
+                            batch.update(draftRef, { status: 'voting' });
+                        }
+                        
+                        // 2. Check for Voting -> Results transition
+                        else if (draft.status === 'voting' && now > votingEnds) {
+                            const { newStatus, newSummary } = tallyVotes(draft); // Tally votes
+                            batch.update(draftRef, { 
+                                status: newStatus, // 'results', 'failed', or 'canceled'
+                                resultSummary: newSummary 
+                            });
+                        }
+                        
+                        // 3. Check for Results -> Active/Failed transition
+                        else if (draft.status === 'results' && now > resultsEnds) {
+                            if (draft.resultSummary.startsWith('Draft Passed!')) {
+                                // Activate the law (cannot be in a batch)
+                                // We'll do this outside the batch
+                            } else {
+                                // It failed, move to final 'failed' state
+                                batch.update(draftRef, { status: 'failed' });
+                            }
+                        }
+                    }
+
+                    // Commit all simple status updates
+                    await batch.commit();
+                    
+                    // Now, handle activations separately (since they require multiple writes)
+                    for (const doc of snapshot.docs) {
+                        const draft = { id: doc.id, ...doc.data() };
+                        const resultsEnds = draft.resultsEndsAt.toDate();
+                        
+                        if (draft.status === 'results' && now > resultsEnds && draft.resultSummary.startsWith('Draft Passed!')) {
+                            await activateLaw(draft.id, draft); // Point 10, Step 8
+                        }
+                    }
+
+                } catch (error) {
+                    console.error("Error updating draft statuses:", error);
+                }
+            }
+            // --- 11. Standard User Dashboard (Point 11) ---
+
+            /**
+             * Point 11: Render Standard User Dashboard
+             * - Fetches warnings, advisories, and notifications
+             */
+            async function renderMyDashboard() {
+                const user = appState.currentUser;
+                document.getElementById('my-dashboard-title').textContent = `${user.role} Dashboard`;
+                
+                const warningsList = document.getElementById('my-dashboard-warnings');
+                const advisoriesList = document.getElementById('my-dashboard-advisories');
+                const notificationsList = document.getElementById('my-dashboard-notifications');
+
+                // 1. Load Warnings
+                appState.listeners.myWarnings = warningsCollection
+                    .where('userId', '==', user.id)
+                    .orderBy('timestamp', 'desc')
+                    .onSnapshot(snapshot => {
+                        if (snapshot.empty) {
+                            warningsList.innerHTML = '<p>You have no warnings.</p>';
+                            return;
+                        }
+                        warningsList.innerHTML = snapshot.docs.map(doc => {
+                            const warning = doc.data();
+                            return `
+                                <div class="item-card">
+                                    <p>${warning.message}</p>
+                                    <div class="item-meta">Issued on ${formatTimestamp(warning.timestamp)}</div>
+                                </div>
+                            `;
+                        }).join('');
+                    });
+
+                // 2. Load Leader Advisories
+                appState.listeners.myAdvisories = advisoriesCollection
+                    .where('userId', '==', user.id)
+                    .orderBy('timestamp', 'desc')
+                    .onSnapshot(snapshot => {
+                        if (snapshot.empty) {
+                            advisoriesList.innerHTML = '<p>No new advisories from the Leader.</p>';
+                            return;
+                        }
+                        advisoriesList.innerHTML = snapshot.docs.map(doc => {
+                            const advisory = doc.data();
+                            return `
+                                <div class="item-card">
+                                    <h4>${advisory.subject}</h4>
+                                    <p>${advisory.message}</p>
+                                    <div class="item-meta">Received on ${formatTimestamp(advisory.timestamp)}</div>
+                                </div>
+                            `;
+                        }).join('');
+                    });
+
+                // 3. Load General Notifications
+                appState.listeners.myNotifications = notificationsCollection
+                    .where('audience', 'in', ['all', user.id, user.role])
+                    .orderBy('timestamp', 'desc')
+                    .limit(20)
+                    .onSnapshot(snapshot => {
+                        if (snapshot.empty) {
+                            notificationsList.innerHTML = '<p>No new notifications.</p>';
+                            return;
+                        }
+                        notificationsList.innerHTML = snapshot.docs.map(doc => {
+                            const notif = doc.data();
+                            return `
+                                <div class="item-card">
+                                    <h4>${notif.title}</h4>
+                                    <p>${notif.message}</p>
+                                    <div class="item-meta">${formatTimestamp(notif.timestamp)}</div>
+                                </div>
+                            `;
+                        }).join('');
+                    });
+            }
+
+            /**
+             * Helper for creating notifications (used by Leader actions)
+             * @param {string} title - The title of the notification
+             * @param {string} message - The body text
+             * @param {string} audience - 'all', 'Leader', 'Co-Leader', or a specific userId
+             */
+            async function createNotification(title, message, audience) {
+                try {
+                    await notificationsCollection.add({
+                        title: title,
+                        message: message,
+                        audience: audience,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (error) {
+                    console.error("Error creating notification:", error);
                 }
             }
             
-            async function handleRemoveRule(ruleId) {
-                if (!confirm('Are you sure you want to permanently delete this rule? This action does not require a vote and is final.')) {
+            /**
+             * Point 6: Handle General Advisory Submit (Modified for file upload)
+             */
+            async function handleAdvisorySubmit(e) {
+                e.preventDefault();
+                const submitBtn = document.getElementById('advisory-submit-btn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Submitting...';
+                
+                const subject = document.getElementById('advisory-subject').value;
+                const message = document.getElementById('advisory-message').value;
+
+                try {
+                    let fileUrl = '';
+                    // Point 6: Upload file if attached
+                    if (appState.fileToUpload.advisory) {
+                        const file = appState.fileToUpload.advisory;
+                        const filePath = `advice/${appState.currentUser.id}/${Date.now()}_${file.name}`;
+                        fileUrl = await uploadFile(file, filePath);
+                        appState.fileToUpload.advisory = null;
+                        document.getElementById('advisory-file').value = null;
+                    }
+                
+                    await adviceCollection.add({
+                        userId: appState.currentUser.id,
+                        name: appState.currentUser.name,
+                        subject: subject,
+                        message: message,
+                        fileUrl: fileUrl, // New field
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        status: 'Submitted' // Point 12
+                    });
+                    
+                    alert('Your advice has been sent to the Leader.');
+                    document.getElementById('advisory-form').reset();
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Advice';
+                    showPage('central-page');
+                } catch (error) {
+                    console.error("Error submitting advice:", error);
+                    alert('Error submitting advice. Please try again.');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Advice';
+                }
+            }
+
+
+            // --- 12. LEADER DASHBOARD (Point 12) ---
+
+            /**
+             * Point 12: Render Leader Dashboard
+             * - Renders new registrations list with all fields
+             */
+            function renderLeaderDashboard() {
+                const listEl = document.getElementById('new-registrations-list');
+                if (!listEl) return;
+                
+                appState.listeners.newRegistrations = metaCollection.doc('main')
+                    .onSnapshot(doc => {
+                        if (!doc.exists) return;
+                        const newRegistrations = doc.data()?.newRegistrations || [];
+                        
+                        if (newRegistrations.length === 0) {
+                            listEl.innerHTML = '<p>No new registrations.</p>';
+                            return;
+                        }
+                        
+                        listEl.innerHTML = newRegistrations.map(reg => {
+                            return `
+                                <div class="item-card">
+                                    <div style="display: flex; gap: 15px; align-items: center;">
+                                        <img src="${reg.profilePicUrl || `https://ui-avatars.com/api/?name=${reg.name.charAt(0)}&background=0D8ABC&color=fff`}" class="profile-avatar">
+                                        <div>
+                                            <h4>${reg.name} (ID: ${reg.id})</h4>
+                                            <p><strong>Password:</strong> ${reg.password} | <strong>Role:</strong> ${reg.role}</p>
+                                        </div>
+                                    </div>
+                                    <div class="reg-details-grid" style="margin-top: 15px;">
+                                        <p><strong>Nickname:</strong> ${reg.nickname || 'N/A'}</p>
+                                        <p><strong>Clan:</strong> ${reg.clanName}</p>
+                                        <p><strong>DOB:</strong> ${reg.dob}</p>
+                                        <p><strong>Mobile:</strong> ${reg.mobile || 'N/A'}</p>
+                                        <p><strong>Country:</strong> ${reg.country}</p>
+                                        <p><strong>State:</strong> ${reg.state || 'N/A'}</p>
+                                        <p><strong>District:</strong> ${reg.district || 'N/A'}</p>
+                                        <p><strong>Languages:</strong> ${reg.languages}</p>
+                                    </div>
+                                    <p><strong>Note:</strong> ${reg.positiveNote || 'N/A'}</p>
+                                    <button class="btn btn-success btn-sm" data-action="acknowledge-registration" data-id="${reg.id}" style="margin-top: 10px;">Approve & Create Account</button>
+                                </div>
+                            `;
+                        }).join('');
+                    }, error => console.error("Error listening to new registrations:", error));
+            }
+
+            /**
+             * Point 12: Acknowledge Registration
+             * - Moves user from meta/newRegistrations
+             * - Saves to playerMasterList
+             * - Creates user in usersCollection
+             */
+            async function handleAcknowledgeRegistration(userId) {
+                const metaDoc = await metaCollection.doc('main').get();
+                if (!metaDoc.exists) return;
+                const newRegistrations = metaDoc.data()?.newRegistrations || [];
+                
+                const regData = newRegistrations.find(reg => reg.id === userId);
+                if (!regData) {
+                    alert('Error: Could not find registration data.');
                     return;
                 }
                 
+                // 1. Create the user in the main 'users' collection
+                const newUser = { ...regData, status: 'active' }; // Set status to active
+                
                 try {
-                    await rulesCollection.doc(ruleId).delete();
+                    await usersCollection.doc(newUser.id).set(newUser);
+                    
+                    // 2. Save to master list (for backup/export)
+                    await playerMasterListCollection.doc(newUser.id).set(newUser);
+                    
+                    // 3. Remove from the pending list
+                    const updatedRegistrations = newRegistrations.filter(reg => reg.id !== userId);
+                    await metaCollection.doc('main').update({
+                        newRegistrations: updatedRegistrations
+                    });
+                    
+                    // 4. Update cache
+                    appState.allUsersCache.push(newUser);
+                    alert(`User ${newUser.name} has been approved and their account is now active.`);
+
                 } catch (error) {
-                    console.error("Error removing rule:", error);
+                    console.error("Error acknowledging registration:", error);
+                    alert('Error creating user account.');
+                }
+            }
+
+            async function renderPlayersActions() {
+                const bodyEl = document.getElementById('players-actions-table-body');
+                if (!bodyEl) return;
+                
+                try {
+                    // Force refresh cache
+                    await cacheAllUsers();
+                    const users = appState.allUsersCache;
+
+                    bodyEl.innerHTML = users.map(user => {
+                        const joinedDate = user.createdAt?.toDate ? user.createdAt.toDate() : new Date();
+                        return `
+                            <tr>
+                                <td>
+                                    <b>${user.name}</b><br>
+                                    <small>${user.id}</small>
+                                </td>
+                                <td>${user.password}</td>
+                                <td>
+                                    <select class="form-control" data-action="player-action-select" data-task="role" data-id="${user.id}" ${user.role === 'Leader' ? 'disabled' : ''}>
+                                        <option value="Member" ${user.role === 'Member' ? 'selected' : ''}>Member</option>
+                                        <option value="Elder" ${user.role === 'Elder' ? 'selected' : ''}>Elder</option>
+                                        <option value="Co-Leader" ${user.role === 'Co-Leader' ? 'selected' : ''}>Co-Leader</option>
+                                        <option value="Not Allotted" ${user.role === 'Not Allotted' ? 'selected' : ''}>Not Allotted</option>
+                                        <option value="Leader" ${user.role === 'Leader' ? 'selected' : ''}>Leader</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <span style="font-weight: 600; text-transform: capitalize; color: ${user.status === 'active' ? 'green' : 'red'};">${user.status}</span>
+                                </td>
+                                <td>${formatTimestamp(user.createdAt)}</td>
+                                <td style="min-width: 250px;">
+                                    <button class="btn btn-primary btn-sm" data-action="show-player-details" data-id="${user.id}">Details</button>
+                                    ${user.role !== 'Leader' ? `
+                                        <button class="btn btn-warning btn-sm" data-action="player-action" data-task="warn" data-id="${user.id}">Send Warning</button>
+                                        <button class="btn btn-secondary btn-sm" data-action="player-action" data-task="suspend" data-id="${user.id}">Suspend</button>
+                                        <button class="btn btn-warning btn-sm" data-action="player-action" data-task="ban_temp" data-id="${user.id}">Temp Ban</button>
+                                        <button class="btn btn-danger btn-sm" data-action="player-action" data-task="ban_perm" data-id="${user.id}">Ban (Perm)</button>
+                                    ` : ''}
+                                    ${user.status !== 'active' ? `
+                                        <button class="btn btn-success btn-sm" data-action="player-action" data-task="reactivate" data-id="${user.id}">Reactivate</button>
+                                    ` : ''}
+                                </td>
+                            </tr>
+                        `
+                    }).join('');
+                    
+                    bodyEl.querySelectorAll('select[data-action="player-action-select"]').forEach(select => {
+                        select.addEventListener('change', (e) => {
+                            handlePlayerAction(e.target.dataset.id, 'role', e.target.value);
+                        });
+                    });
+
+                } catch (error) {
+                    console.error("Error rendering player actions:", error);
+                    bodyEl.innerHTML = `<tr><td colspan="6">Error loading players.</td></tr>`;
                 }
             }
             
-            // ★★★ MODIFIED: Player Actions (Suspend added) ★★★
+            /**
+             * Point 12: Handle Player Actions (Warn, Suspend, Ban)
+             */
             async function handlePlayerAction(userId, task, value = null) {
                 const userRef = usersCollection.doc(userId);
+                const user = appState.allUsersCache.find(u => u.id === userId);
+                if (!user || user.role === 'Leader') return;
                 
                 try {
-                    const userDoc = await userRef.get();
-                    if (!userDoc.exists) return;
-                    const user = userDoc.data();
-                    if (user.role === 'Leader') return;
-
                     switch (task) {
                         case 'role':
                             await userRef.update({ role: value });
                             alert(`User ${user.name} role changed to ${value}.`);
                             break;
-                        case 'suspend':
-                            if (confirm(`Are you sure you want to suspend ${user.name}? This is temporary.`)) {
+                        // Point 12: Send Warning
+                        case 'warn':
+                            const reason = prompt(`Enter warning message for ${user.name}:`);
+                            if (reason) {
+                                await warningsCollection.add({
+                                    userId: user.id,
+                                    message: reason,
+                                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                                alert(`Warning sent to ${user.name}.`);
+                            }
+                            break;
+                        case 'suspend': // Temporary, can be reactivated
+                            if (confirm(`Are you sure you want to suspend ${user.name}? They will be logged out and unable to log in.`)) {
                                 await userRef.update({ status: 'suspended' });
                             }
                             break;
-                        case 'ban':
-                            if (confirm(`Are you sure you want to ban ${user.name}? This is permanent.`)) {
-                                await userRef.update({ status: 'banned' });
+                        // Point 12: Time-Bound Ban
+                        case 'ban_temp':
+                            const days = prompt(`Enter ban duration in days for ${user.name}:`);
+                            const banDays = parseInt(days, 10);
+                            if (banDays > 0) {
+                                const banEnds = new Date(Date.now() + banDays * 24 * 60 * 60 * 1000);
+                                if (confirm(`This will ban ${user.name} for ${banDays} days (until ${banEnds.toLocaleString()}). Continue?`)) {
+                                    await userRef.update({ 
+                                        status: 'banned',
+                                        banEndsAt: banEnds
+                                    });
+                                }
+                            } else {
+                                alert('Invalid number of days.');
                             }
                             break;
-                        case 'delete':
-                            if (confirm(`Are you sure you want to PERMANENTLY DELETE ${user.name}? This action cannot be undone.`)) {
-                                await userRef.delete();
-                                await metaCollection.doc('main').update({
-                                    cabinet: firebase.firestore.FieldValue.arrayRemove(userId)
+                        case 'ban_perm': // Permanent
+                            if (confirm(`Are you sure you want to PERMANENTLY BAN ${user.name}? This is final.`)) {
+                                await userRef.update({ 
+                                    status: 'banned',
+                                    banEndsAt: null // Ensure no end date
                                 });
                             }
                             break;
                         case 'reactivate':
-                            await userRef.update({ status: 'active' });
+                            await userRef.update({ 
+                                status: 'active',
+                                banEndsAt: null
+                            });
                             break;
                     }
                     
-                    renderPlayersActions(); // पेज को फिर से रेंडर करें
+                    renderPlayersActions(); // Refresh list
 
                 } catch (error) {
                     console.error("Error performing player action:", error);
                 }
+            }
+            
+            async function renderPlayerDetails(userId) {
+                // ... (This function is complex but has no major changes, so keeping it as-is from original)
+                // (No, wait, it needs to be updated to use formatTimestamp)
+                const user = appState.allUsersCache.find(u => u.id === userId);
+                if (!user) {
+                    showPage('players-actions-page');
+                    return;
+                }
+
+                document.getElementById('player-detail-name').textContent = user.name;
+                
+                document.getElementById('player-detail-info').innerHTML = `
+                    <p><strong>Player ID:</strong> ${user.id}</p>
+                    <p><strong>Role:</strong> ${user.role}</p>
+                    <p><strong>Status:</strong> ${user.status}</p>
+                    <p><strong>Clan:</strong> ${user.clanName}</p>
+                    <p><strong>From:</strong> ${user.state ? user.state + ', ' : ''}${user.country}</p>
+                    <p><strong>Languages:</strong> ${user.languages}</p>
+                    <p><strong>Joined:</strong> ${formatTimestamp(user.createdAt)}</p>
+                `;
+                
+                const activityEl = document.getElementById('player-detail-activity');
+                activityEl.innerHTML = '<p>Loading activity...</p>';
+                let activity = [];
+
+                try {
+                    // This is very performance-intensive. In a real app, this data would be indexed.
+                    const collectionsToSearch = [
+                        { name: '[General]', ref: messagesCollection.doc('general').collection('chats') },
+                        { name: '[Special]', ref: messagesCollection.doc('special').collection('chats') },
+                        { name: '[Secretariat]', ref: secretariatMessagesCollection },
+                        { name: '[DM to Leader]', ref: dmsCollection },
+                        { name: '[Advice]', ref: adviceCollection },
+                        { name: '[Warnings]', ref: warningsCollection }
+                    ];
+
+                    for (const col of collectionsToSearch) {
+                        const snapshot = await col.ref.where('userId', '==', userId).limit(20).get();
+                        snapshot.docs.forEach(m => {
+                            const data = m.data();
+                            let content = data.text || data.message || data.subject || `[${data.type || 'action'}]`;
+                            activity.push({ time: data.timestamp.toDate(), text: `${col.name} ${content}` });
+                        });
+                    }
+                    
+                    activity.sort((a, b) => b.time - a.time);
+                    
+                    if (activity.length === 0) {
+                        activityEl.innerHTML = '<p>No activity recorded.</p>';
+                    } else {
+                        activityEl.innerHTML = activity.map(a => `
+                            <div class="advice-item">
+                                <small>${a.time.toLocaleString()}</small>
+                                <p>${a.text}</p>
+                            </div>
+                        `).join('');
+                    }
+                } catch (error) {
+                    console.error("Error loading player activity:", error);
+                    activityEl.innerHTML = '<p>Error loading activity.</p>';
+                }
+            }
+
+            /**
+             * Point 12: Render Quarry (DM Inbox)
+             * - Adds Reply, Consider, Reject buttons
+             */
+            function renderQuarry() {
+                const listEl = document.getElementById('quarry-list');
+                if (!listEl) return;
+                
+                appState.listeners.dms = dmsCollection
+                    .orderBy('timestamp', 'desc')
+                    .onSnapshot(snapshot => {
+                        const allDMs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        // ... (Thread logic remains same as original)
+                        const threads = {};
+                        allDMs.forEach(dm => {
+                            const threadId = dm.threadId || dm.id;
+                            if (!threads[threadId]) threads[threadId] = [];
+                            threads[threadId].push(dm);
+                        });
+                        const sortedThreadIds = Object.keys(threads).sort((a, b) => {
+                            const lastMsgA = threads[a][0].timestamp.toDate(); // Already sorted desc
+                            const lastMsgB = threads[b][0].timestamp.toDate();
+                            return lastMsgB - lastMsgA;
+                        });
+                        
+                        if (sortedThreadIds.length === 0) {
+                            listEl.innerHTML = '<p>Your inbox is empty.</p>';
+                            return;
+                        }
+
+                        listEl.innerHTML = sortedThreadIds.map(threadId => {
+                            const threadMessages = threads[threadId].sort((a, b) => a.timestamp.toDate() - b.timestamp.toDate());
+                            const firstDM = threadMessages[0];
+                            const sender = appState.allUsersCache.find(u => u.id === firstDM.userId);
+
+                            return `
+                                <div class="item-card">
+                                    <h3>${firstDM.subject} (From: ${sender ? sender.name : '...'})</h3>
+                                    
+                                    <div class="advice-section" style="padding-left: 15px; border-left: 3px solid #eee;">
+                                        ${threadMessages.map(dm => `
+                                            <div class="advice-item">
+                                                <p>${dm.message}</p>
+                                                <small><b>${dm.userId === appState.currentUser.id ? 'Your Reply' : (sender ? sender.name : '...')}</b>: ${formatTimestamp(dm.timestamp)}</small>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    
+                                    <form class="reply-dm-form" style="margin-top: 15px;">
+                                        <textarea id="reply-dm-${firstDM.id}" class="form-control" placeholder="Type your reply..."></textarea>
+                                        <button type="button" class="btn btn-primary btn-sm" style="margin-top: 5px;" data-action="reply-dm" data-id="${firstDM.id}">Send Reply</button>
+                                    </form>
+                                </div>
+                            `;
+                        }).join('');
+                    }, error => console.error("Error listening to DMs:", error));
+            }
+            
+            async function handleQuarryReply(dmId) {
+                const message = document.getElementById(`reply-dm-${dmId}`).value;
+                if (!message) return;
+                
+                try {
+                    const originalDM = await dmsCollection.doc(dmId).get();
+                    if (!originalDM.exists) return;
+                    const threadId = originalDM.data().threadId;
+
+                    await dmsCollection.add({
+                        threadId: threadId, 
+                        userId: appState.currentUser.id, 
+                        subject: `Re: ${originalDM.data().subject}`,
+                        message: message,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        isReply: true
+                    });
+                    
+                } catch (error) {
+                    console.error("Error replying to DM:", error);
+                }
+            }
+            
+            /**
+             * Point 12: Render Advisory Inbox
+             * - Adds file link and new buttons
+             */
+            function renderAdvisoryInbox() {
+                const listEl = document.getElementById('advisory-inbox-list');
+                if (!listEl) return;
+                
+                appState.listeners.advice = adviceCollection
+                    .orderBy('timestamp', 'desc')
+                    .onSnapshot(snapshot => {
+                        const adviceItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                        if (adviceItems.length === 0) {
+                            listEl.innerHTML = '<p>No advice submitted.</p>';
+                            return;
+                        }
+                        
+                        listEl.innerHTML = adviceItems.map(item => {
+                            const sender = appState.allUsersCache.find(u => u.id === item.userId);
+                            return `
+                                <div class="item-card" style="background: ${item.status === 'Submitted' ? '#fff' : '#f5f5f5'}">
+                                    <h3>${item.subject} (Status: ${item.status})</h3>
+                                    <div class="item-meta">
+                                        From: ${sender ? sender.name : '...'} on ${formatTimestamp(item.timestamp)}
+                                    </div>
+                                    <p>${item.message}</p>
+                                    ${item.fileUrl ? `<a href="${item.fileUrl}" target="_blank" class="btn btn-secondary btn-sm">View Attachment</a>` : ''}
+                                    <div style="margin-top: 10px;">
+                                        <button class="btn btn-success btn-sm" data-action="mark-advice" data-id="${item.id}" data-status="Considered">Mark as Considered</button>
+                                        <button class="btn btn-warning btn-sm" data-action="mark-advice" data-id="${item.id}" data-status="Rejected">Mark as Rejected</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }, error => console.error("Error listening to advice inbox:", error));
+            }
+            
+            async function markAdvice(adviceId, status) {
+                try {
+                    await adviceCollection.doc(adviceId).update({
+                        status: status
+                    });
+                } catch (error) {
+                    console.error("Error marking advice:", error);
+                }
+            }
+
+            // --- 13. LEADER ROLE MANAGEMENT (Point 12) ---
+
+            async function renderCabinetManagement() {
+                const optionsEl = document.getElementById('cabinet-player-options');
+                if (!optionsEl) return;
+                
+                const eligible = appState.allUsersCache.filter(u => (u.role === 'Co-Leader' || u.role === 'Elder') && u.status === 'active');
+                if (eligible.length === 0) {
+                    optionsEl.innerHTML = '<p>No Co-Leaders or Elders available.</p>';
+                    return;
+                }
+                
+                const metaDoc = await metaCollection.doc('main').get();
+                const cabinetIds = metaDoc.data()?.cabinet || [];
+
+                optionsEl.innerHTML = eligible.map(user => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${user.id}" id="cab-${user.id}"
+                            ${cabinetIds.includes(user.id) ? 'checked' : ''}>
+                        <label class="form-check-label" for="cab-${user.id}">
+                            ${user.name} (${user.role})
+                        </label>
+                    </div>
+                `).join('');
             }
             
             async function handleCabinetSave(e) {
@@ -2952,66 +5134,329 @@
                 }
                 
                 try {
-                    await metaCollection.doc('main').set({ 
-                        cabinet: selected
-                    }, { merge: true }); 
-                    
+                    await metaCollection.doc('main').update({ cabinet: selected });
                     alert('Cabinet players updated.');
                     showPage('leader-dashboard-page');
                 } catch (error) {
                     console.error("Error saving cabinet:", error);
                 }
             }
-            
-            // ★★★ NEW: Chat Action Handlers (Pin, Delete) ★★★
-            async function handlePinMessage(messageId, room) {
-                if (appState.currentUser.role !== 'Leader') return;
+
+            async function renderGenSecManagement() {
+                const optionsEl = document.getElementById('gensec-player-options');
+                const currentEl = document.getElementById('gensec-current');
+                const eligible = appState.allUsersCache.filter(u => u.role === 'Co-Leader' && u.status === 'active');
                 
-                const fieldToUpdate = (room === 'ga') ? 'pinnedMessageGA' : 'pinnedMessageSA';
+                const metaDoc = await metaCollection.doc('main').get();
+                const genSec = metaDoc.data()?.generalSecretary;
+
+                if (genSec) {
+                    const user = appState.allUsersCache.find(u => u.id === genSec.id);
+                    const appointedAt = genSec.appointedAt.toDate();
+                    const endsAt = new Date(appointedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+                    const canRemove = new Date() > new Date(appointedAt.getTime() + 10 * 24 * 60 * 60 * 1000);
+                    
+                    currentEl.innerHTML = `
+                        <h4>Current General Secretary</h4>
+                        <p><b>${user ? user.name : genSec.id}</b></p>
+                        <p><small>Appointed: ${formatTimestamp(genSec.appointedAt)}</small></p>
+                        <p><small>Term Ends: ${endsAt.toLocaleString()}</small></p>
+                        <button type="button" class="btn btn-danger btn-sm" data-action="remove-gensec" data-id="${genSec.id}" data-role="generalSecretary" ${canRemove ? '' : 'disabled'}>
+                            ${canRemove ? 'Remove' : 'Cannot remove for 10 days'}
+                        </button>
+                    `;
+                    optionsEl.innerHTML = '<p>A General Secretary is already appointed. Remove them to appoint a new one.</p>';
+                    document.getElementById('gensec-management-form').style.display = 'none';
+                } else {
+                    currentEl.innerHTML = '<h4>No General Secretary appointed.</h4>';
+                    document.getElementById('gensec-management-form').style.display = 'block';
+                    optionsEl.innerHTML = eligible.map(user => `
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="gensec-select" value="${user.id}" id="gs-${user.id}">
+                            <label class="form-check-label" for="gs-${user.id}">
+                                ${user.name} (${user.role})
+                            </label>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            async function handleGenSecSave(e) {
+                e.preventDefault();
+                const selected = document.querySelector('input[name="gensec-select"]:checked');
+                if (!selected) {
+                    alert('Please select a player to appoint.');
+                    return;
+                }
+                
+                const newGenSec = {
+                    id: selected.value,
+                    appointedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
                 
                 try {
-                    await metaCollection.doc('main').update({
-                        [fieldToUpdate]: messageId 
-                    });
+                    await metaCollection.doc('main').update({ generalSecretary: newGenSec });
+                    alert('General Secretary appointed.');
+                    renderGenSecManagement(); // Refresh page
                 } catch (error) {
-                    console.error("Error pinning message:", error);
+                    console.error("Error appointing GenSec:", error);
                 }
             }
             
-            async function handleDeleteMessage(messageId, room) {
-                if (appState.currentUser.role !== 'Leader') return;
+            async function renderGovernorManagement() {
+                const optionsEl = document.getElementById('governor-player-options');
+                const listEl = document.getElementById('governor-current-list');
+                const eligible = appState.allUsersCache.filter(u => u.role === 'Co-Leader' && u.status === 'active');
                 
-                if (!confirm('Are you sure you want to delete this message forever?')) return;
-                
-                const roomName = (room === 'ga' ? 'general' : 'special');
-                const msgRef = messagesCollection.doc(roomName).collection('chats').doc(messageId);
+                const metaDoc = await metaCollection.doc('main').get();
+                const governors = metaDoc.data()?.governors || [];
+                const governorIds = governors.map(g => g.id);
 
+                if (governors.length > 0) {
+                    listEl.innerHTML = '<h4>Current Governors</h4>' + governors.map(gov => {
+                        const user = appState.allUsersCache.find(u => u.id === gov.id);
+                        const appointedAt = gov.appointedAt.toDate();
+                        const endsAt = new Date(appointedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+                        const canRemove = new Date() > new Date(appointedAt.getTime() + 10 * 24 * 60 * 60 * 1000);
+                        return `
+                            <div class="item-card">
+                                <p><b>${user ? user.name : gov.id}</b></p>
+                                <p><small>Appointed: ${formatTimestamp(gov.appointedAt)} (Ends: ${endsAt.toLocaleString()})</small></p>
+                                <button type="button" class="btn btn-danger btn-sm" data-action="remove-governor" data-id="${gov.id}" data-role="governor" ${canRemove ? '' : 'disabled'}>
+                                    ${canRemove ? 'Remove' : 'Cannot remove for 10 days'}
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    listEl.innerHTML = '<h4>No Governors appointed.</h4>';
+                }
+
+                optionsEl.innerHTML = eligible.map(user => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${user.id}" id="gov-${user.id}"
+                            ${governorIds.includes(user.id) ? 'checked' : ''}>
+                        <label class="form-check-label" for="gov-${user.id}">
+                            ${user.name} (${user.role})
+                        </label>
+                    </div>
+                `).join('');
+            }
+            
+            async function handleGovernorSave(e) {
+                e.preventDefault();
+                const selectedIds = [];
+                document.querySelectorAll('#governor-player-options input[type="checkbox"]:checked').forEach(input => {
+                    selectedIds.push(input.value);
+                });
+                
+                if (selectedIds.length > 5) {
+                    alert('Error: You can select a maximum of 5 governors.');
+                    return;
+                }
+                
                 try {
-                    // Check if message has a file
-                    const msgDoc = await msgRef.get();
-                    if(msgDoc.exists && msgDoc.data().url) {
-                        // Delete file from Storage
-                        const fileRef = storage.refFromURL(msgDoc.data().url);
-                        await fileRef.delete();
+                    const metaDoc = await metaCollection.doc('main').get();
+                    const oldGovernors = metaDoc.data()?.governors || [];
+                    
+                    const newGovernorList = selectedIds.map(id => {
+                        // Check if this user was already a governor to keep their original appointment date
+                        const existing = oldGovernors.find(g => g.id === id);
+                        return existing || {
+                            id: id,
+                            appointedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                    });
+                    
+                    await metaCollection.doc('main').update({ governors: newGovernorList });
+                    alert('Governors list updated.');
+                    renderGovernorManagement(); // Refresh
+                } catch (error) {
+                    console.error("Error saving governors:", error);
+                }
+            }
+
+            async function handleRemoveTermLimitRole(userId, role) {
+                if (!confirm(`Are you sure you want to remove this player from their role as ${role}?`)) {
+                    return;
+                }
+                
+                try {
+                    if (role === 'generalSecretary') {
+                        await metaCollection.doc('main').update({ generalSecretary: null });
+                        renderGenSecManagement(); // Refresh
+                    }
+                    if (role === 'governor') {
+                        await metaCollection.doc('main').update({
+                            governors: firebase.firestore.FieldValue.arrayRemove({ id: userId }) // This only works if the object matches exactly, which it won't.
+                        });
+                        // We must read, filter, and write
+                        const metaDoc = await metaCollection.doc('main').get();
+                        const governors = metaDoc.data()?.governors || [];
+                        const updatedGovernors = governors.filter(g => g.id !== userId);
+                        await metaCollection.doc('main').update({ governors: updatedGovernors });
+                        renderGovernorManagement(); // Refresh
+                    }
+                } catch (error) {
+                    console.error("Error removing role:", error);
+                }
+            }
+
+
+            // --- 14. LEADER FORCEFUL ACTIONS (Point 13) ---
+            
+            /**
+             * Point 13, Step 1: Verify Leader for Forceful Actions
+             */
+            async function handleForceVerify(e) {
+                e.preventDefault();
+                hideAlert('force-verify-error');
+                
+                const id = document.getElementById('force-verify-id').value;
+                const pass = document.getElementById('force-verify-pass').value;
+                const confirmText = document.getElementById('force-verify-confirm').value;
+                const captcha = document.getElementById('force-verify-captcha').value;
+                const accept = document.getElementById('force-verify-accept').checked;
+                
+                // 1. Check all fields
+                if (!accept || !document.getElementById('force-verify-reason').value) {
+                    showAlert('force-verify-error', 'You must fill all fields and accept the disclaimer.');
+                    return;
+                }
+                if (confirmText !== 'CONFIRM') {
+                    showAlert('force-verify-error', 'You must type CONFIRM exactly.');
+                    return;
+                }
+                if (captcha !== '10') {
+                    showAlert('force-verify-error', 'Captcha is incorrect.');
+                    return;
+                }
+                
+                // 2. Re-authenticate
+                if (id !== 'Aryanrajput' || pass !== '91621272') { // Use hardcoded credentials
+                    showAlert('force-verify-error', 'Leader ID or Password incorrect.');
+                    return;
+                }
+                
+                // 3. Double-check against Firestore just in case
+                try {
+                    const leaderDoc = await usersCollection.doc(id).get();
+                    if (leaderDoc.data().password !== pass) {
+                        showAlert('force-verify-error', 'CRITICAL: Firestore password does not match. Aborting.');
+                        return;
                     }
                     
-                    // Delete message from Firestore
-                    await msgRef.delete();
+                    // All checks passed
+                    alert('Verification successful. Secure powers unlocked.');
+                    document.getElementById('force-verify-form').reset();
+                    showPage('forcefully-powers-page');
                     
                 } catch (error) {
-                    console.error("Error deleting message (and file):", error);
+                    showAlert('force-verify-error', 'Error connecting to database.');
+                }
+            }
+            /**
+             * Point 13, Step 2: Handle Forceful Actions
+             * - Executes destructive actions after verification
+             */
+            async function handleForcefulAction(action) {
+                let userId, newPass, noticeId, ruleId, draftId, room, msgId;
+                
+                try {
+                    switch (action) {
+                        case 'force-delete-player':
+                            userId = prompt("Enter the EXACT Player ID to PERMANENTLY DELETE:");
+                            if (userId && userId !== 'Aryanrajput') {
+                                if (confirm(`FINAL WARNING: This will delete ${userId} forever. Continue?`)) {
+                                    await usersCollection.doc(userId).delete();
+                                    await playerMasterListCollection.doc(userId).delete();
+                                    // Remove from roles
+                                    await metaCollection.doc('main').update({
+                                        cabinet: firebase.firestore.FieldValue.arrayRemove(userId),
+                                        governors: firebase.firestore.FieldValue.arrayRemove(appState.allUsersCache.find(u => u.id === userId)?.governorObject || {}), // Complex remove
+                                    });
+                                    // Check if GenSec
+                                    const metaDoc = await metaCollection.doc('main').get();
+                                    if (metaDoc.data().generalSecretary?.id === userId) {
+                                        await metaCollection.doc('main').update({ generalSecretary: null });
+                                    }
+                                    alert('Player forcefully deleted.');
+                                    await cacheAllUsers(); // Refresh cache
+                                }
+                            } else if (userId === 'Aryanrajput') {
+                                alert('Leader account cannot be deleted.');
+                            }
+                            break;
+                            
+                        case 'force-change-pass':
+                            userId = prompt("Enter the Player ID to change password:");
+                            newPass = prompt(`Enter new password for ${userId}:`);
+                            if (userId && newPass && newPass.length >= 6) {
+                                await usersCollection.doc(userId).update({ password: newPass });
+                                await playerMasterListCollection.doc(userId).update({ password: newPass });
+                                alert('Password forcefully changed.');
+                            } else {
+                                alert('Invalid ID or password (must be 6+ chars).');
+                            }
+                            break;
+                            
+                        case 'force-delete-notice':
+                            noticeId = prompt("Enter the EXACT Notice ID to delete:");
+                            if (noticeId) {
+                                await noticesCollection.doc(noticeId).delete();
+                                alert('Notice forcefully deleted.');
+                            }
+                            break;
+                            
+                        case 'force-delete-rule':
+                            ruleId = prompt("Enter the EXACT Rule ID to delete:");
+                            if (ruleId) {
+                                await handleRemoveRule(ruleId, true); // Use existing function with force flag
+                            }
+                            break;
+                            
+                        case 'force-cancel-draft':
+                            draftId = prompt("Enter the EXACT Draft ID to cancel:");
+                            if (draftId) {
+                                await draftsCollection.doc(draftId).update({
+                                    status: 'canceled',
+                                    resultSummary: 'Forcefully canceled by Leader.'
+                                });
+                                alert('Draft forcefully canceled.');
+                            }
+                            break;
+                            
+                        case 'force-delete-message':
+                            room = prompt("Enter room (ga, sa, or sec):");
+                            msgId = prompt("Enter the EXACT Message ID to delete:");
+                            if (msgId && ['ga', 'sa', 'sec'].includes(room)) {
+                                await handleDeleteMessage(msgId, room, true); // Use existing function with force flag
+                            } else {
+                                alert('Invalid room or Message ID.');
+                            }
+                            break;
+                    }
+                } catch (error) {
+                    console.error("Forceful action failed:", error);
+                    alert(`Action failed: ${error.message}`);
                 }
             }
             
-            // ★★★ NEW: Export Player Data Function ★★★
+            /**
+             * Handle Data Export (Leader)
+             */
             async function handleExportData() {
                 if (appState.currentUser.role !== 'Leader') return;
 
                 try {
-                    // We already have all users in the cache
+                    // Fetch master list for a complete export
+                    const snapshot = await playerMasterListCollection.get();
+                    const masterList = snapshot.docs.map(doc => doc.data());
+                    
                     const allData = {
                         exportedAt: new Date().toISOString(),
-                        users: appState.allUsersCache
+                        users: masterList, // Export from the master list
+                        // Optionally add other collections
                     };
                     
                     const dataStr = JSON.stringify(allData, null, 2);
@@ -3033,7 +5478,60 @@
             }
 
 
-            // --- 13. Start the App ---
+            // --- 15. Chat Action Handlers (Pin, Delete) ---
+            
+            async function handlePinMessage(messageId, room) {
+                if (appState.currentUser.role !== 'Leader') return;
+                
+                const fieldToUpdate = (room === 'ga') ? 'pinnedMessageGA' : 'pinnedMessageSA';
+                
+                try {
+                    await metaCollection.doc('main').update({
+                        [fieldToUpdate]: messageId 
+                    });
+                } catch (error) {
+                    console.error("Error pinning message:", error);
+                }
+            }
+            
+            async function handleDeleteMessage(messageId, room, isForced) {
+                if (appState.currentUser.role !== 'Leader') return;
+                
+                if (!isForced) {
+                    if (!confirm('Are you sure you want to delete this message forever?')) return;
+                }
+                
+                let msgRef;
+                if (room === 'ga') msgRef = messagesCollection.doc('general').collection('chats').doc(messageId);
+                else if (room === 'sa') msgRef = messagesCollection.doc('special').collection('chats').doc(messageId);
+                else if (room === 'sec') msgRef = secretariatMessagesCollection.doc(messageId);
+                else return;
+
+                try {
+                    // Check if message has a file
+                    const msgDoc = await msgRef.get();
+                    if(msgDoc.exists && msgDoc.data().url) {
+                        // Delete file from Storage
+                        try {
+                            const fileRef = storage.refFromURL(msgDoc.data().url);
+                            await fileRef.delete();
+                        } catch (storageError) {
+                            console.warn("Could not delete file from storage (it may have been already deleted):", storageError.message);
+                        }
+                    }
+                    
+                    // Delete message from Firestore
+                    await msgRef.delete();
+                    if (isForced) alert('Message forcefully deleted.');
+                    
+                } catch (error) {
+                    console.error("Error deleting message (and file):", error);
+                    if (isForced) alert('Error deleting message.');
+                }
+            }
+
+
+            // --- 16. Start the App ---
             initApp();
         });
     </script>
