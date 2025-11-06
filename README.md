@@ -9,8 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
-    
-    <style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script> <style>
         /* --- 1. Global Styles & Theme --- */
         :root {
             --color-primary: #007bff;
@@ -67,6 +66,17 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        
+        /* --- NEW: Online/Offline Status Dot --- */
+        .status-dot {
+            height: 8px;
+            width: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .status-dot.online { background-color: #28a745; }
+        .status-dot.offline { background-color: #dc3545; }
 
         /* --- 2. Header & Navigation --- */
         #header-bar {
@@ -79,7 +89,7 @@
         }
 
         #header-logged-out {
-            text-align: center;
+            text-align: right;
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--color-primary-dark);
@@ -245,8 +255,8 @@
         .alert-info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
 
         /* --- 4. Page-Specific Styles --- */
-
         /* Login & Register */
+        /* MODIFIED: Login page is no longer the default, but we still need the styles */
         #login-page, #register-page {
             justify-content: center;
             padding-top: 40px;
@@ -340,8 +350,22 @@
             height: 30px;
             font-size: 0.9rem;
         }
+        
+        /* --- NEW: Player List Online Status --- */
+        .player-list-info {
+            flex-grow: 1;
+        }
         .player-list-item .name { font-weight: 600; }
         .player-list-item .role { font-size: 0.8rem; color: var(--color-dark-gray); }
+        .player-list-item .status-text {
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+        .player-list-item .status-text.online { color: #28a745; }
+        .player-list-item .status-text.offline { color: #dc3545; }
+        
         .chat-main {
             flex: 1;
             display: flex;
@@ -559,6 +583,27 @@
             border-top-left-radius: 0;
             border-bottom-left-radius: 0;
         }
+        
+        /* --- NEW: Login Prompt Overlay --- */
+        .login-prompt-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            border-top: 1px solid var(--color-medium-gray);
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+            gap: 15px;
+        }
+        .login-prompt-overlay h3 {
+            color: var(--color-primary-dark);
+        }
 
         /* Rules, Notices, Drafts */
         .item-list .item-card {
@@ -712,11 +757,12 @@
     </style>
 </head>
 <body>
+    <audio id="chat-notification-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-message-pop-alert-2354.mp3" preload="auto"></audio>
 
     <div id="app">
         <header id="header-bar">
             <div id="header-logged-out">
-                PLEASE LOGIN
+                <button class="btn btn-primary" data-action="show-login">Login / Register</button>
             </div>
             <div id="header-logged-in" style="display: none;">
                 <div class="profile-info">
@@ -734,7 +780,7 @@
         </header>
 
         <main class="container">
-            <div id="login-page" class="page active">
+            <div id="login-page" class="page">
                 <div class="form-container">
                     <div class="card">
                         <h2 class="card-title">Clan Portal Login</h2>
@@ -886,13 +932,13 @@
                             <button type="submit" class="btn btn-primary" style="width: 100%;">Register</button>
                         </form>
                         <div class="form-footer">
-                            Already have an account.? <a data-action="show-login">Login here</a>
+                            Already have an account? <a data-action="show-login">Login here</a>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div id="home-page" class="page">
+            <div id="home-page" class="page active">
                 <div class="home-grid" id="home-buttons-grid">
                     </div>
                 <div class="card cabinet-list">
@@ -901,7 +947,6 @@
                         </div>
                 </div>
             </div>
-            
             <div id="general-assembly-page" class="page">
                 <div class="assembly-layout">
                     <div class="player-list-sidebar">
@@ -919,14 +964,22 @@
                         <div id="ga-controls-container" class="chat-controls-container">
                             </div>
 
-                        <form id="ga-chat-form" class="chat-input-form">
-                            <div class="file-input-wrapper">
-                                <button type="button" class="btn btn-secondary">📎</button>
-                                <input type="file" id="ga-file-input" accept="image/*,video/*">
+                        <div id="ga-chat-input-area" style="position: relative;">
+                            <form id="ga-chat-form" class="chat-input-form">
+                                <div class="file-input-wrapper">
+                                    <button type="button" class="btn btn-secondary">📎</button>
+                                    <input type="file" id="ga-file-input" accept="image/*,video/*">
+                                </div>
+                                <input type="text" id="ga-chat-input" class="form-control" placeholder="Type your message..." autocomplete="off">
+                                <button type="submit" class="btn btn-primary">Send</button>
+                            </form>
+                            
+                            <div id="ga-login-prompt" class="login-prompt-overlay" style="display: none;">
+                                <h3>Login Required</h3>
+                                <p>You must login or register to send messages.</p>
+                                <button class="btn btn-primary" data-action="show-login">Login Now</button>
                             </div>
-                            <input type="text" id="ga-chat-input" class="form-control" placeholder="Type your message..." autocomplete="off">
-                            <button type="submit" class="btn btn-primary">Send</button>
-                        </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -947,15 +1000,24 @@
                         
                         <div id="sa-controls-container" class="chat-controls-container">
                             </div>
-
-                        <form id="sa-chat-form" class="chat-input-form">
-                            <div class="file-input-wrapper">
-                                <button type="button" class="btn btn-secondary">📎</button>
-                                <input type="file" id="sa-file-input" accept="image/*,video/*">
+                        
+                        <div id="sa-chat-input-area" style="position: relative;">
+                            <form id="sa-chat-form" class="chat-input-form">
+                                <div class="file-input-wrapper">
+                                    <button type="button" class="btn btn-secondary">📎</button>
+                                    <input type="file" id="sa-file-input" accept="image/*,video/*">
+                                </div>
+                                <input type="text" id="sa-chat-input" class="form-control" placeholder="Type your message..." autocomplete="off">
+                                <button type="submit" class="btn btn-primary">Post</button>
+                            </form>
+                            
+                            <div id="sa-login-prompt" class="login-prompt-overlay" style="display: none;">
+                                <h3>Login Required</h3>
+                                <p>You must login or register to send messages.</p>
+                                <button class="btn btn-primary" data-action="show-login">Login Now</button>
                             </div>
-                            <input type="text" id="sa-chat-input" class="form-control" placeholder="Type your message..." autocomplete="off">
-                            <button type="submit" class="btn btn-primary">Post</button>
-                        </form>
+                        </div>
+
                         <div id="sa-post-error" class="alert alert-danger" style="display: none; margin: 20px;">Only Leader and Co-Leaders can post here.</div>
                     </div>
                 </div>
@@ -1051,6 +1113,12 @@
                         </div>
                         <button type="submit" class="btn btn-primary">Send Private Message</button>
                     </form>
+                    
+                    <div id="leader-chat-login-prompt" class="login-prompt-overlay" style="position: static; background: none; box-shadow: none; padding-top: 20px; display: none;">
+                        <h3>Login Required</h3>
+                        <p>You must login or register to send private messages.</p>
+                        <button class="btn btn-primary" data-action="show-login">Login Now</button>
+                    </div>
                 </div>
             </div>
 
@@ -1077,6 +1145,12 @@
                         </div>
                         <button type="submit" class="btn btn-primary">Submit Advice</button>
                     </form>
+                    
+                    <div id="advisory-login-prompt" class="login-prompt-overlay" style="position: static; background: none; box-shadow: none; padding-top: 20px; display: none;">
+                        <h3>Login Required</h3>
+                        <p>You must login or register to submit advice.</p>
+                        <button class="btn btn-primary" data-action="show-login">Login Now</button>
+                    </div>
                 </div>
             </div>
 
@@ -1196,26 +1270,32 @@
               storageBucket: "clanportal.firebasestorage.app",
               messagingSenderId: "881645657294",
               appId: "1:881645657294:web:e0f46054f8a113ce37c49f",
-              measurementId: "G-Z84SMVXCTX"
+              measurementId: "G-Z84SMVXCTX",
+              // NEW: Realtime Database URL
+              databaseURL: "https://clanportal-default-rtdb.firebaseio.com"
             };
 
             // Initialize Firebase
             firebase.initializeApp(firebaseConfig);
             
             const db = firebase.firestore(); 
-            // ★★★ NEW: Firebase Storage reference ★★★
             const storage = firebase.storage();
+            // NEW: Realtime Database reference
+            const rtdb = firebase.database();
 
             // --- 2. State and Database References ---
 
             let appState = {
                 currentUser: null,
-                currentPage: 'login-page',
+                currentPage: 'home-page', // MODIFIED: Default page is home
                 currentDraftId: null,
                 viewingPlayerId: null,
-                allUsersCache: [], // सभी यूज़र्स को कैश करने के लिए
-                listeners: {}, // Real-time listeners को मैनेज करने के लिए
-                // ★★★ NEW: Store files being uploaded ★★★
+                allUsersCache: [], 
+                listeners: {}, 
+                // NEW: Cache for online statuses
+                userStatuses: {},
+                // NEW: Prevent sound on initial load
+                isFirstLoad: { ga: true, sa: true },
                 fileToUpload: {
                     ga: null,
                     sa: null
@@ -1224,13 +1304,15 @@
 
             // Database collections के रेफरेन्स
             const usersCollection = db.collection('users');
-            const metaCollection = db.collection('meta'); // Cabinet, New Reg etc.
+            const metaCollection = db.collection('meta'); 
             const messagesCollection = db.collection('messages');
             const draftsCollection = db.collection('drafts');
             const rulesCollection = db.collection('rules');
             const noticesCollection = db.collection('notices');
             const adviceCollection = db.collection('advice');
             const dmsCollection = db.collection('dms');
+            // NEW: RTDB reference for presence
+            const statusRef = rtdb.ref('status');
 
 
             // --- 3. Initialization ---
@@ -1242,8 +1324,8 @@
                         await metaCollection.doc('main').set({
                             cabinet: [],
                             newRegistrations: [],
-                            pinnedMessageGA: null, // ★★★ NEW
-                            pinnedMessageSA: null  // ★★★ NEW
+                            pinnedMessageGA: null, 
+                            pinnedMessageSA: null
                         }, { merge: true });
                         console.log("Initialized 'meta/main' document.");
                     }
@@ -1251,11 +1333,8 @@
                     console.error("Error initializing meta doc:", error);
                 }
 
-
-                // Set up the final Leader account if it doesn't exist
                 try {
                     const leaderDoc = await usersCollection.doc('Aryanrajput').get();
-                    
                     if (!leaderDoc.exists) {
                         await usersCollection.doc('Aryanrajput').set({
                             id: 'Aryanrajput',
@@ -1277,20 +1356,22 @@
                     console.error("Error checking/creating leader:", error);
                 }
 
+                // NEW: Always listen to statuses
+                listenToAllStatuses();
                 
-                // Check session storage for logged in user
+                // MODIFIED: Check session storage
                 const sessionUser = sessionStorage.getItem('clanPortalUser');
+                await cacheAllUsers(); // Cache users early
+                
                 if (sessionUser) {
                     appState.currentUser = JSON.parse(sessionUser);
-                    await cacheAllUsers(); // सभी यूज़र्स की जानकारी लोड करें
-                    updateHeader();
-                    showPage('home-page');
+                    setupPresence(appState.currentUser.id); // NEW: Set user as online
                 } else {
-                    updateHeader();
-                    showPage('login-page');
+                    appState.currentUser = null;
                 }
-
-                // Attach all event listeners
+                
+                updateHeader();
+                showPage('home-page'); // MODIFIED: Always show home page first
                 attachEventListeners();
             }
 
@@ -1303,6 +1384,72 @@
                 } catch (error) {
                     console.error("Error caching users:", error);
                 }
+            }
+            
+            // --- NEW: Chat Notification Sound ---
+            function playChatSound() {
+                const sound = document.getElementById('chat-notification-sound');
+                if (sound) {
+                    sound.play().catch(error => console.warn("Sound play interrupted:", error));
+                }
+            }
+            
+            // --- NEW: Presence System (Online/Offline) ---
+            function setupPresence(userId) {
+                const userStatusRef = rtdb.ref(`/status/${userId}`);
+
+                const isOfflineForDatabase = {
+                    state: 'offline',
+                    last_changed: firebase.database.ServerValue.TIMESTAMP
+                };
+                const isOnlineForDatabase = {
+                    state: 'online',
+                    last_changed: firebase.database.ServerValue.TIMESTAMP
+                };
+
+                // Listen for connection status
+                rtdb.ref('.info/connected').on('value', (snapshot) => {
+                    if (snapshot.val() === false) {
+                        return; // Not connected
+                    }
+                    
+                    userStatusRef.onDisconnect().set(isOfflineForDatabase).then(() => {
+                        userStatusRef.set(isOnlineForDatabase);
+                    });
+                });
+                
+                // Set online on load
+                userStatusRef.set(isOnlineForDatabase);
+                
+                // Set offline on tab close
+                window.addEventListener('beforeunload', () => {
+                     userStatusRef.set(isOfflineForDatabase);
+                });
+            }
+            
+            function goOffline(userId) {
+                const userStatusRef = rtdb.ref(`/status/${userId}`);
+                userStatusRef.set({
+                    state: 'offline',
+                    last_changed: firebase.database.ServerValue.TIMESTAMP
+                });
+            }
+            
+            function listenToAllStatuses() {
+                statusRef.on('value', (snapshot) => {
+                    const statuses = snapshot.val();
+                    appState.userStatuses = statuses || {};
+                    
+                    // Re-render player lists if they are active
+                    if (appState.currentPage === 'general-assembly-page') {
+                        const activeUsers = appState.allUsersCache.filter(u => u.status === 'active');
+                        renderPlayerList('ga-player-list', activeUsers);
+                    }
+                    if (appState.currentPage === 'special-assembly-page') {
+                        const leadership = appState.allUsersCache.filter(u => (u.role === 'Leader' || u.role === 'Co-Leader') && u.status === 'active');
+                        renderPlayerList('sa-player-list', leadership);
+                    }
+                });
             }
 
 
@@ -1321,7 +1468,6 @@
             function showPage(pageId, context = null) {
                 detachAllListeners();
                 
-                // ★★★ NEW: Clear file uploads on page change ★★★
                 appState.fileToUpload = { ga: null, sa: null };
                 document.getElementById('ga-file-input').value = null;
                 document.getElementById('sa-file-input').value = null;
@@ -1342,12 +1488,16 @@
                             renderCabinetList();
                             break;
                         case 'general-assembly-page':
+                            appState.isFirstLoad.ga = true; // NEW
                             renderGeneralAssembly();
-                            renderChatControls('ga'); 
+                            renderChatControls('ga');
+                            checkLoginForPage(pageId); // NEW
                             break;
                         case 'special-assembly-page':
+                            appState.isFirstLoad.sa = true; // NEW
                             renderSpecialAssembly();
                             renderChatControls('sa');
+                            checkLoginForPage(pageId); // NEW
                             break;
                         case 'notice-board-page':
                             renderNoticeBoard();
@@ -1361,6 +1511,12 @@
                             break;
                         case 'rules-page':
                             renderRules();
+                            break;
+                        case 'leader-chat-page': // NEW
+                            checkLoginForPage(pageId);
+                            break;
+                        case 'advisory-page': // NEW
+                            checkLoginForPage(pageId);
                             break;
                         case 'leader-dashboard-page':
                             renderLeaderDashboard();
@@ -1387,11 +1543,26 @@
 
                 } else {
                     console.error(`Page not found: ${pageId}`);
-                    if (appState.currentUser) {
-                        showPage('home-page');
-                    } else {
-                        showPage('login-page');
-                    }
+                    showPage('home-page'); // Default to home page
+                }
+            }
+            
+            // --- NEW: Check Login for Pages ---
+            function checkLoginForPage(pageId) {
+                const isLoggedIn = !!appState.currentUser;
+                
+                if (pageId === 'general-assembly-page') {
+                    document.getElementById('ga-chat-form').style.display = isLoggedIn ? 'flex' : 'none';
+                    document.getElementById('ga-login-prompt').style.display = isLoggedIn ? 'none' : 'flex';
+                } else if (pageId === 'special-assembly-page') {
+                    document.getElementById('sa-chat-form').style.display = isLoggedIn ? 'flex' : 'none';
+                    document.getElementById('sa-login-prompt').style.display = isLoggedIn ? 'none' : 'flex';
+                } else if (pageId === 'leader-chat-page') {
+                    document.getElementById('leader-chat-form').style.display = isLoggedIn ? 'block' : 'none';
+                    document.getElementById('leader-chat-login-prompt').style.display = isLoggedIn ? 'none' : 'block';
+                } else if (pageId === 'advisory-page') {
+                    document.getElementById('advisory-form').style.display = isLoggedIn ? 'block' : 'none';
+                    document.getElementById('advisory-login-prompt').style.display = isLoggedIn ? 'none' : 'block';
                 }
             }
 
@@ -1399,13 +1570,11 @@
 
             function attachEventListeners() {
                 document.body.addEventListener('click', (e) => {
-                    // Use `closest` for data-action to catch clicks on icons inside buttons
                     let target = e.target.closest('[data-action]');
                     if (!target) return;
 
                     const action = target.dataset.action;
                     if (action) {
-                        // e.preventDefault(); // Only prevent if it's not a link action like export
                         
                         if (action.startsWith('show-')) {
                             e.preventDefault();
@@ -1428,7 +1597,7 @@
                                 break;
                             case 'activate-draft':
                                 e.preventDefault();
-                                handleActivateLaw(target.dataset.id); // Pass ID from button
+                                handleActivateLaw(target.dataset.id); 
                                 break;
                             case 'leader-delete-rule':
                                 e.preventDefault();
@@ -1454,20 +1623,18 @@
                                 e.preventDefault();
                                 handleQuarryReply(target.dataset.id);
                                 break;
-                            // ★★★ NEW: Chat Message Actions ★★★
                             case 'pin-message':
                                 e.preventDefault();
                                 handlePinMessage(target.dataset.id, target.dataset.room);
                                 break;
                             case 'unpin-message':
                                 e.preventDefault();
-                                handlePinMessage(null, target.dataset.room); // Set to null to unpin
+                                handlePinMessage(null, target.dataset.room); 
                                 break;
                             case 'delete-message':
                                 e.preventDefault();
                                 handleDeleteMessage(target.dataset.id, target.dataset.room);
                                 break;
-                            // ★★★ NEW: Leader Data Export ★★★
                             case 'export-player-data':
                                 e.preventDefault();
                                 handleExportData();
@@ -1493,7 +1660,6 @@
                     document.getElementById('other-region-group').style.display = (country !== 'India' && country !== '') ? 'block' : 'none';
                 });
                 
-                // ★★★ NEW: File Input Listeners ★★★
                 document.getElementById('ga-file-input').addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (file) {
@@ -1544,7 +1710,7 @@
                     <div class="home-button" data-action="show-advisory">🧠 Give Advice</div>
                 `;
 
-                if (user.role === 'Leader') {
+                if (user && user.role === 'Leader') { // MODIFIED: Check if user exists
                     buttons += `
                         <div class="home-button leader-btn" data-action="show-leader-dashboard">🛡️ Leader Dashboard</div>
                     `;
@@ -1579,6 +1745,7 @@
                 return `<div class="profile-avatar avatar">${user.name.charAt(0).toUpperCase()}</div>`;
             }
 
+            // MODIFIED: renderPlayerList with Online Status
             function renderPlayerList(elementId, users) {
                 const listEl = document.getElementById(elementId);
                 if (!listEl) return;
@@ -1586,15 +1753,26 @@
                 
                 users.sort((a, b) => roleOrder[a.role] - roleOrder[b.role]);
                 
-                listEl.innerHTML = users.map(user => `
-                    <div class="player-list-item">
-                        ${getAvatar(user)}
-                        <div>
-                            <div class="name">${user.name}</div>
-                            <div class="role">${user.role}</div>
+                listEl.innerHTML = users.map(user => {
+                    const status = appState.userStatuses[user.id];
+                    const isOnline = status && status.state === 'online';
+                    const statusClass = isOnline ? 'online' : 'offline';
+                    const statusText = isOnline ? 'Online' : 'Offline';
+
+                    return `
+                        <div class="player-list-item">
+                            ${getAvatar(user)}
+                            <div class="player-list-info">
+                                <div class="name">${user.name}</div>
+                                <div class="role">${user.role}</div>
+                            </div>
+                            <div class="status-text ${statusClass}">
+                                <span class="status-dot ${statusClass}"></span>
+                                ${statusText}
+                            </div>
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             }
             
             // --- 7. REAL-TIME CHAT FUNCTIONS ---
@@ -1603,7 +1781,6 @@
                 const activeUsers = appState.allUsersCache.filter(u => u.status === 'active');
                 renderPlayerList('ga-player-list', activeUsers);
                 
-                // ★★★ NEW: Listen for pinned message ★★★
                 appState.listeners.pinnedGA = metaCollection.doc('main')
                     .onSnapshot((doc) => {
                         const pinnedMsgId = doc.data()?.pinnedMessageGA;
@@ -1618,6 +1795,20 @@
                     .onSnapshot((snapshot) => {
                         const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         renderMessages('ga-chat-box', messages, appState.allUsersCache, 'ga');
+                        
+                        // NEW: Play sound
+                        if (!appState.isFirstLoad.ga) {
+                            snapshot.docChanges().forEach((change) => {
+                                if (change.type === 'added') {
+                                    const msg = change.doc.data();
+                                    if (appState.currentUser && msg.userId !== appState.currentUser.id) {
+                                        playChatSound();
+                                    }
+                                }
+                            });
+                        }
+                        appState.isFirstLoad.ga = false;
+                        
                     }, (error) => {
                         console.error("Error listening to general chat:", error);
                     });
@@ -1627,7 +1818,6 @@
                 const leadership = appState.allUsersCache.filter(u => (u.role === 'Leader' || u.role === 'Co-Leader') && u.status === 'active');
                 renderPlayerList('sa-player-list', leadership);
                 
-                // ★★★ NEW: Listen for pinned message ★★★
                 appState.listeners.pinnedSA = metaCollection.doc('main')
                     .onSnapshot((doc) => {
                         const pinnedMsgId = doc.data()?.pinnedMessageSA;
@@ -1642,6 +1832,20 @@
                     .onSnapshot((snapshot) => {
                         const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         renderMessages('sa-chat-box', messages, appState.allUsersCache, 'sa');
+                        
+                        // NEW: Play sound
+                        if (!appState.isFirstLoad.sa) {
+                            snapshot.docChanges().forEach((change) => {
+                                if (change.type === 'added') {
+                                     const msg = change.doc.data();
+                                     if (appState.currentUser && msg.userId !== appState.currentUser.id) {
+                                        playChatSound();
+                                    }
+                                }
+                            });
+                        }
+                        appState.isFirstLoad.sa = false;
+                        
                     }, (error) => {
                         console.error("Error listening to special chat:", error);
                     });
@@ -1652,6 +1856,12 @@
                 if (!container) return;
 
                 const user = appState.currentUser;
+                // MODIFIED: Don't render if no user
+                if (!user) {
+                    container.innerHTML = '';
+                    return;
+                }
+                
                 let controlsHTML = '';
 
                 const memberColors = `
@@ -1705,7 +1915,6 @@
                 container.innerHTML = controlsHTML;
             }
 
-            // ★★★ NEW: Render Pinned Message Bar ★★★
             async function renderPinnedMessage(elementId, messageId, room) {
                 const pinEl = document.getElementById(elementId);
                 if (!pinEl) return;
@@ -1733,7 +1942,7 @@
                         <div class="pinned-message-content">
                             <b>📌 PINNED:</b> ${user ? user.name : '...'} - ${content.substring(0, 50)}...
                         </div>
-                        ${appState.currentUser.role === 'Leader' ? 
+                        ${(appState.currentUser && appState.currentUser.role === 'Leader') ? 
                             `<button class="btn btn-icon btn-sm" data-action="unpin-message" data-room="${room}">✖</button>` : ''}
                     `;
                     pinEl.style.display = 'flex';
@@ -1744,7 +1953,6 @@
                 }
             }
 
-            // ★★★ HEAVILY MODIFIED: renderMessages Function ★★★
             function renderMessages(boxId, messages, users, room) {
                 const box = document.getElementById(boxId);
                 if (!box) return;
@@ -1773,8 +1981,8 @@
 
                     const timestamp = msg.timestamp?.toDate ? msg.timestamp.toDate() : new Date();
 
-                    // Check if message is from "me" or "other"
-                    const meOrOther = (msg.userId === appState.currentUser.id) ? 'me' : 'other';
+                    // MODIFIED: Check if currentUser exists
+                    const meOrOther = (appState.currentUser && msg.userId === appState.currentUser.id) ? 'me' : 'other';
 
                     // Media Content
                     let mediaHTML = '';
@@ -1788,7 +1996,7 @@
                     
                     // Leader actions
                     let leaderActions = '';
-                    if (appState.currentUser.role === 'Leader') {
+                    if (appState.currentUser && appState.currentUser.role === 'Leader') {
                         leaderActions = `
                             <button class_:"btn-icon" data-action="pin-message" data-id="${msg.id}" data-room="${room}" title="Pin">📌</button>
                             <button class_:"btn-icon" data-action="delete-message" data-id="${msg.id}" data-room="${room}" title="Delete">🗑️</button>
@@ -1818,17 +2026,20 @@
                 const formEl = document.getElementById('notice-board-post-form');
                 if (!listEl || !formEl) return;
 
-                // Show post form only for cabinet members
-                metaCollection.doc('main').get().then(doc => {
-                    const cabinetIds = doc.data()?.cabinet || [];
-                    if (cabinetIds.includes(appState.currentUser.id)) {
-                        formEl.style.display = 'block';
-                    } else {
-                        formEl.style.display = 'none';
-                    }
-                }).catch(error => console.error("Error getting cabinet status:", error));
+                // MODIFIED: Show form only for logged-in cabinet members
+                if (appState.currentUser) {
+                    metaCollection.doc('main').get().then(doc => {
+                        const cabinetIds = doc.data()?.cabinet || [];
+                        if (cabinetIds.includes(appState.currentUser.id)) {
+                            formEl.style.display = 'block';
+                        } else {
+                            formEl.style.display = 'none';
+                        }
+                    }).catch(error => console.error("Error getting cabinet status:", error));
+                } else {
+                    formEl.style.display = 'none';
+                }
 
-                // Notices के लिए Real-time listener
                 appState.listeners.notices = noticesCollection
                     .orderBy('timestamp', 'desc')
                     .onSnapshot(snapshot => {
@@ -1860,7 +2071,7 @@
                 if (!listEl) return;
                 
                 appState.listeners.rules = rulesCollection
-                    .orderBy('activatedAt', 'asc') // नए रूल्स नीचे आएँगे
+                    .orderBy('activatedAt', 'asc') 
                     .onSnapshot(snapshot => {
                         const rules = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -1873,7 +2084,7 @@
                             <div class="item-card">
                                 <h3>Rule ${index + 1}: ${rule.title}</h3>
                                 <p>${rule.description.replace(/\n/g, '<br>')}</p>
-                                ${appState.currentUser.role === 'Leader' ? 
+                                ${(appState.currentUser && appState.currentUser.role === 'Leader') ? 
                                     `<button class="btn btn-danger btn-sm leader-action-btn" data-action="leader-delete-rule" data-id="${rule.id}">Delete</button>` : ''
                                 }
                             </div>
@@ -1885,7 +2096,6 @@
                 const listEl = document.getElementById('new-registrations-list');
                 if (!listEl) return;
                 
-                // 'meta' collection में 'main' document से 'newRegistrations' सुनें
                 appState.listeners.newRegistrations = metaCollection.doc('main')
                     .onSnapshot(doc => {
                         if (!doc.exists) {
@@ -1921,7 +2131,7 @@
                 try {
                     const snapshot = await usersCollection.orderBy('name', 'asc').get();
                     const users = snapshot.docs.map(doc => doc.data());
-                    appState.allUsersCache = users; // Cache को अपडेट करें
+                    appState.allUsersCache = users; 
 
                     bodyEl.innerHTML = users.map(user => {
                         const joinedDate = user.createdAt?.toDate ? user.createdAt.toDate() : new Date();
@@ -2179,7 +2389,7 @@
                 try {
                     const snapshot = await draftsToUpdateQuery.get();
                     if (snapshot.empty) {
-                        return; // कोई काम नहीं है
+                        return; 
                     }
 
                     const batch = db.batch();
@@ -2334,13 +2544,19 @@
                             statusEl.className = 'draft-status-bar'; 
                             const adviceEnds = draft.adviceEndsAt.toDate();
                             const votingEnds = draft.votingEndsAt.toDate();
+                            
+                            // MODIFIED: Check for login before showing forms
+                            const isLoggedIn = !!appState.currentUser;
 
                             if (draft.status === 'advice') {
                                 statusEl.textContent = 'Advice Phase';
                                 statusEl.classList.add('status-advice');
                                 timerEl.textContent = `Advice phase ends at: ${adviceEnds.toLocaleString()}`;
                                 timerEl.style.display = 'block';
-                                adviceSection.style.display = 'block';
+                                
+                                if(isLoggedIn) {
+                                    adviceSection.style.display = 'block';
+                                }
                                 
                                 const adviceListEl = document.getElementById('draft-advice-list');
                                 if (draft.advice.length === 0) {
@@ -2364,24 +2580,29 @@
                                 timerEl.textContent = `Voting ends at: ${votingEnds.toLocaleString()}`;
                                 timerEl.style.display = 'block';
 
-                                const userVote = (draft.votes || []).find(v => v.userId === appState.currentUser.id);
-                                if (userVote) {
-                                    votingSection.style.display = 'block';
-                                    votingSection.innerHTML = `<div class="alert alert-success">You have voted: <strong>${userVote.vote.toUpperCase()}</strong></div>`;
-                                } else {
-                                    votingSection.style.display = 'block';
-                                    const voteErrorEl = document.getElementById('draft-vote-error');
-                                    if (!voteErrorEl) {
-                                        votingSection.innerHTML = `
-                                            <h3>Cast Your Vote</h3>
-                                            <div id="draft-vote-error" class="alert alert-danger" style="display: none;"></div>
-                                            <div class="vote-options">
-                                                <button class="btn btn-success" data-action="draft-vote" data-vote="yes">✅ Yes</button>
-                                                <button class="btn btn-danger" data-action="draft-vote" data-vote="no">❌ No</button>
-                                                <button class="btn btn-secondary" data-action="draft-vote" data-vote="absent">⚪ Absent</button>
-                                            </div>
-                                        `;
+                                if (isLoggedIn) {
+                                    const userVote = (draft.votes || []).find(v => v.userId === appState.currentUser.id);
+                                    if (userVote) {
+                                        votingSection.style.display = 'block';
+                                        votingSection.innerHTML = `<div class="alert alert-success">You have voted: <strong>${userVote.vote.toUpperCase()}</strong></div>`;
+                                    } else {
+                                        votingSection.style.display = 'block';
+                                        const voteErrorEl = document.getElementById('draft-vote-error');
+                                        if (!voteErrorEl) {
+                                            votingSection.innerHTML = `
+                                                <h3>Cast Your Vote</h3>
+                                                <div id="draft-vote-error" class="alert alert-danger" style="display: none;"></div>
+                                                <div class="vote-options">
+                                                    <button class="btn btn-success" data-action="draft-vote" data-vote="yes">✅ Yes</button>
+                                                    <button class="btn btn-danger" data-action="draft-vote" data-vote="no">❌ No</button>
+                                                    <button class="btn btn-secondary" data-action="draft-vote" data-vote="absent">⚪ Absent</button>
+                                                </div>
+                                            `;
+                                        }
                                     }
+                                } else {
+                                     votingSection.innerHTML = `<div class="alert alert-info">Please log in to vote.</div>`;
+                                     votingSection.style.display = 'block';
                                 }
                             }
                             else { 
@@ -2391,7 +2612,7 @@
                                 if (draft.status === 'passed_pending_activation') {
                                     statusEl.textContent = 'Passed - Awaiting Activation';
                                     statusEl.classList.add('status-passed');
-                                    if (appState.currentUser.role === 'Leader') {
+                                    if (isLoggedIn && appState.currentUser.role === 'Leader') {
                                         activationSection.style.display = 'block';
                                         document.getElementById('draft-activate-btn').dataset.id = draft.id;
                                     }
@@ -2431,7 +2652,11 @@
                             
                             appState.currentUser = user;
                             sessionStorage.setItem('clanPortalUser', JSON.stringify(user)); 
-                            await cacheAllUsers(); // लॉगिन के बाद सभी यूज़र्स को कैश करें
+                            await cacheAllUsers(); 
+                            
+                            setupPresence(user.id); // NEW: Set online
+                            listenToAllStatuses(); // NEW: Refresh statuses
+                            
                             updateHeader();
                             showPage('home-page');
                             errorEl.style.display = 'none';
@@ -2452,12 +2677,17 @@
             }
             
             function handleLogout() {
+                if (appState.currentUser) {
+                    goOffline(appState.currentUser.id); // NEW: Set offline
+                }
                 appState.currentUser = null;
                 sessionStorage.removeItem('clanPortalUser');
-                detachAllListeners(); // लॉगआउट पर सभी listeners बंद करें
-                appState.allUsersCache = []; // Cache खाली करें
+                detachAllListeners(); 
+                statusRef.off(); // NEW: Stop listening to RTDB
+                appState.userStatuses = {};
+                appState.allUsersCache = []; 
                 updateHeader();
-                showPage('login-page');
+                showPage('home-page'); // MODIFIED: Go to home page
             }
 
             async function handleRegister(e) {
@@ -2505,7 +2735,7 @@
                         password: newPassword,
                         role: document.getElementById('reg-role').value, 
                         status: 'active',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp() // सर्वर टाइम
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp() 
                     };
 
                     await usersCollection.doc(newUser.id).set(newUser);
@@ -2561,14 +2791,20 @@
                 }
             }
             
-            // ★★★ MODIFIED: handleChatMessagePost for file upload ★★★
             async function handleChatMessagePost(e, pagePrefix) {
                 e.preventDefault();
+                
+                // NEW: Check login
+                if (!appState.currentUser) {
+                    showPage('login-page');
+                    return;
+                }
+                
                 const input = document.getElementById(`${pagePrefix}-chat-input`);
                 const text = input.value.trim();
                 const file = appState.fileToUpload[pagePrefix];
                 
-                if (!text && !file) return; // Don't send empty messages
+                if (!text && !file) return; 
 
                 const user = appState.currentUser;
                 
@@ -2601,7 +2837,6 @@
                     url: null,
                 };
                 
-                // Clear inputs
                 input.value = '';
                 appState.fileToUpload[pagePrefix] = null;
                 document.getElementById(`${pagePrefix}-file-input`).value = null;
@@ -2609,44 +2844,37 @@
 
 
                 try {
-                    // Handle file upload first
                     if (file) {
-                        const fileType = file.type.split('/')[0]; // 'image', 'video'
+                        const fileType = file.type.split('/')[0]; 
                         const filePath = `chat/${pagePrefix}/${Date.now()}_${file.name}`;
                         const fileRef = storage.ref(filePath);
                         
-                        // Show uploading status
                         input.placeholder = 'Uploading file...';
                         
                         const uploadTask = fileRef.put(file);
                         
                         uploadTask.on('state_changed', 
                             (snapshot) => {
-                                // Progress
                                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                                 input.placeholder = `Uploading... ${Math.round(progress)}%`;
                             }, 
                             (error) => {
-                                // Error
                                 console.error("Upload failed:", error);
                                 alert("File upload failed.");
                                 input.placeholder = 'Type your message...';
                             }, 
                             async () => {
-                                // Success
                                 const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
                                 message.url = downloadURL;
                                 if (fileType === 'image') message.type = 'image';
                                 else if (fileType === 'video') message.type = 'video';
                                 else message.type = 'file';
                                 
-                                // Now add the message to Firestore
                                 await addMessageToDb(pagePrefix, message);
                                 input.placeholder = 'Type your message...';
                             }
                         );
                     } else {
-                        // Just send text message
                         await addMessageToDb(pagePrefix, message);
                     }
                 } catch (error) {
@@ -2665,6 +2893,8 @@
 
             async function handleNoticePost(e) {
                 e.preventDefault();
+                if (!appState.currentUser) return; // NEW Check
+                
                 const title = document.getElementById('notice-title').value;
                 const content = document.getElementById('notice-content').value;
 
@@ -2684,6 +2914,8 @@
             
             async function handleLeaderChatSubmit(e) {
                 e.preventDefault();
+                if (!appState.currentUser) return; // NEW Check
+                
                 const subject = document.getElementById('leader-chat-subject').value;
                 const message = document.getElementById('leader-chat-message').value;
 
@@ -2709,7 +2941,7 @@
             
             async function handleQuarryReply(dmId) {
                 const message = document.getElementById(`reply-dm-${dmId}`).value;
-                if (!message) return;
+                if (!message || !appState.currentUser) return; // NEW Check
                 
                 try {
                     const originalDM = await dmsCollection.doc(dmId).get();
@@ -2735,6 +2967,8 @@
 
             async function handleAdvisorySubmit(e) {
                 e.preventDefault();
+                if (!appState.currentUser) return; // NEW Check
+                
                 const subject = document.getElementById('advisory-subject').value;
                 const message = document.getElementById('advisory-message').value;
 
@@ -2801,6 +3035,8 @@
             
             async function handleDraftAdvice(e) {
                 e.preventDefault();
+                if (!appState.currentUser) return; // NEW Check
+                
                 const text = document.getElementById('draft-advice-input').value;
                 if (!text) return;
                 
@@ -2822,6 +3058,7 @@
             }
 
             async function handleDraftVote(draftId, vote) {
+                if (!appState.currentUser) return; // NEW Check
                 const draftRef = draftsCollection.doc(draftId);
 
                 try {
@@ -2852,6 +3089,7 @@
             }
             
             async function handleActivateLaw(draftId) {
+                if (!appState.currentUser) return; // NEW Check
                 const draftRef = draftsCollection.doc(draftId);
                 
                 try {
@@ -2894,7 +3132,6 @@
                 }
             }
             
-            // ★★★ MODIFIED: Player Actions (Suspend added) ★★★
             async function handlePlayerAction(userId, task, value = null) {
                 const userRef = usersCollection.doc(userId);
                 
@@ -2922,6 +3159,8 @@
                         case 'delete':
                             if (confirm(`Are you sure you want to PERMANENTLY DELETE ${user.name}? This action cannot be undone.`)) {
                                 await userRef.delete();
+                                // NEW: Delete presence data
+                                await rtdb.ref(`/status/${userId}`).remove();
                                 await metaCollection.doc('main').update({
                                     cabinet: firebase.firestore.FieldValue.arrayRemove(userId)
                                 });
@@ -2932,7 +3171,7 @@
                             break;
                     }
                     
-                    renderPlayersActions(); // पेज को फिर से रेंडर करें
+                    renderPlayersActions(); 
 
                 } catch (error) {
                     console.error("Error performing player action:", error);
@@ -2958,14 +3197,14 @@
                     
                     alert('Cabinet players updated.');
                     showPage('leader-dashboard-page');
-                } catch (error) {
+                } catch (error)
+ {
                     console.error("Error saving cabinet:", error);
                 }
             }
             
-            // ★★★ NEW: Chat Action Handlers (Pin, Delete) ★★★
             async function handlePinMessage(messageId, room) {
-                if (appState.currentUser.role !== 'Leader') return;
+                if (!appState.currentUser || appState.currentUser.role !== 'Leader') return;
                 
                 const fieldToUpdate = (room === 'ga') ? 'pinnedMessageGA' : 'pinnedMessageSA';
                 
@@ -2979,7 +3218,7 @@
             }
             
             async function handleDeleteMessage(messageId, room) {
-                if (appState.currentUser.role !== 'Leader') return;
+                if (!appState.currentUser || appState.currentUser.role !== 'Leader') return;
                 
                 if (!confirm('Are you sure you want to delete this message forever?')) return;
                 
@@ -2987,15 +3226,12 @@
                 const msgRef = messagesCollection.doc(roomName).collection('chats').doc(messageId);
 
                 try {
-                    // Check if message has a file
                     const msgDoc = await msgRef.get();
                     if(msgDoc.exists && msgDoc.data().url) {
-                        // Delete file from Storage
                         const fileRef = storage.refFromURL(msgDoc.data().url);
                         await fileRef.delete();
                     }
                     
-                    // Delete message from Firestore
                     await msgRef.delete();
                     
                 } catch (error) {
@@ -3003,12 +3239,10 @@
                 }
             }
             
-            // ★★★ NEW: Export Player Data Function ★★★
             async function handleExportData() {
-                if (appState.currentUser.role !== 'Leader') return;
+                if (!appState.currentUser || appState.currentUser.role !== 'Leader') return;
 
                 try {
-                    // We already have all users in the cache
                     const allData = {
                         exportedAt: new Date().toISOString(),
                         users: appState.allUsersCache
