@@ -886,7 +886,7 @@
                             <button type="submit" class="btn btn-primary" style="width: 100%;">Register</button>
                         </form>
                         <div class="form-footer">
-                            Already have an account? <a data-action="show-login">Login here</a>
+                            Already have an account.? <a data-action="show-login">Login here</a>
                         </div>
                     </div>
                 </div>
