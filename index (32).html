@@ -3,3625 +3,2953 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clan Management Portal (Online)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <title>Clan Command Hub</title>
     
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
     <style>
-        /* --- 1. Global Styles & Theme --- */
+        /* 1. Global Styles & Variables (Light Theme) */
         :root {
-            --color-primary: #007bff;
-            --color-primary-dark: #0056b3;
-            --color-white: #ffffff;
-            --color-light-gray: #f4f7f6;
-            --color-medium-gray: #ddd;
-            --color-dark-gray: #555;
-            --color-text: #333;
-            --color-leader: #ffd700; /* Gold */
-            --color-coleader: #c0c0c0; /* Silver */
-            --color-me-message-bg: #dcf8c6; /* WhatsApp "me" green */
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            --radius: 8px;
+            --color-bg-sidebar: #111b21;
+            --color-bg-main: #e5ddd5; 
+            --color-bg-card: #ffffff;
+            --color-bg-chat-window: #e5ddd5;
+            
+            --color-text-primary: #0b0b0b;
+            --color-text-secondary: #54656f;
+            --color-text-light: #ffffff;
+            
+            --color-accent-blue: #0077b6;
+            --color-accent-blue-hover: #005f90;
+            
+            --color-chat-self: #d9fdd3; /* Self message bubble */
+            --color-chat-other: #ffffff; /* Other message bubble */
+            
+            --color-success: #25D366;
+            --color-danger: #f85149;
+            --color-warning: #f0c674;
+            --color-leader: #fff8e1; /* Light gold for leader messages */
+            --color-coleader: #f5f5f5; /* Light silver for co-leader */
+            
+            --shadow-light: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-medium: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', 'Roboto', sans-serif;
         }
 
         body {
-            font-family: 'Poppins', 'Roboto', sans-serif;
-            background-color: var(--color-light-gray);
-            color: var(--color-text);
-            line-height: 1.6;
+            background-color: var(--color-bg-main);
+            color: var(--color-text-primary);
+            overflow-x: hidden;
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAADFJREFUWEVjZJmY+T8DEjAwMDAwMDKgAwA3K/H/PwYkYJDMuAwkBiMNAAANTQFBKjv+kAAAAABJRU5ErkJggg==');
         }
 
-        #app {
-            max-width: 1400px;
-            margin: 0 auto;
+        h1, h2, h3, h4, h5, h6 { color: var(--color-text-primary); margin-bottom: 1rem; }
+        p { color: var(--color-text-secondary); line-height: 1.6; margin-bottom: 1rem; }
+        a { color: var(--color-accent-blue); text-decoration: none; }
+        pre { background: #f0f2f5; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+        
+        /* 2. App Layout */
+        .app-container { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 250px;
+            background-color: var(--color-bg-sidebar);
+            color: var(--color-text-light);
+            padding: 2rem 1rem;
+            position: fixed;
+            left: 0; top: 0; height: 100%;
+            transition: transform 0.3s ease-in-out;
+            z-index: 1000;
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            overflow-y: auto;
+        }
+        .sidebar-header { text-align: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header h2 { font-size: 1.5rem; color: var(--color-text-light); }
+        .user-profile-sidebar { text-align: center; }
+        .user-profile-sidebar #sidebar-username { font-weight: 600; font-size: 1.1rem; margin-bottom: 0.25rem; color: var(--color-text-light); }
+        .user-profile-sidebar #sidebar-userrole { font-weight: 300; font-size: 0.9rem; color: var(--color-accent-blue); }
+        .sidebar-auth-links { text-align: center; padding: 1rem 0; }
+        .sidebar nav { flex-grow: 1; }
+        .sidebar nav ul { list-style: none; }
+        .sidebar nav ul li a, .logout-btn, .sidebar-auth-links .btn {
+            display: block; padding: 1rem; color: var(--color-text-light); font-weight: 500;
+            border-radius: 8px; margin-bottom: 0.5rem; transition: background-color 0.2s ease, color 0.2s ease;
+            cursor: pointer; text-align: left;
+        }
+        .sidebar-auth-links .btn { text-align: center; background-color: var(--color-accent-blue); }
+        .sidebar-auth-links .btn-link { background: none; color: var(--color-text-light); font-size: 1rem; }
+        .sidebar nav ul li a:hover, .sidebar nav ul li a.active-nav, .logout-btn:hover {
+            background-color: rgba(255,255,255,0.1); color: var(--color-text-light);
+        }
+        .logout-btn { background-color: var(--color-danger); }
+        .nav-section-leader { border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; padding-top: 1rem; }
+        .content-area { flex-grow: 1; padding: 2rem; margin-left: 250px; transition: margin-left 0.3s ease-in-out; }
+        .content-area.full-width { margin-left: 0; }
+
+        /* 3. Page & Helper Classes */
+        .page { display: none; }
+        .page.active { display: block; }
+        .hidden { display: none !important; }
+
+        /* 4. Hamburger Menu (Mobile) */
+        .hamburger-menu {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1001;
+            background: var(--color-bg-sidebar); border: none; color: white;
+            padding: 0.5rem; font-size: 1.5rem; cursor: pointer; border-radius: 8px;
+        }
+        .sidebar-close-btn {
+            display: none; background: none; border: none; color: white;
+            font-size: 1.5rem; position: absolute; top: 10px; right: 10px; cursor: pointer;
         }
 
-        .container {
-            width: 100%;
-            padding: 20px;
-        }
-
-        .page {
-            display: none; /* Hidden by default */
-            flex-direction: column;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        .page.active {
-            display: flex;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* 5. Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .sidebar-close-btn { display: block; }
+            .content-area { margin-left: 0; padding: 4rem 1rem 1rem 1rem; }
+            .hamburger-menu { display: block; }
+            
+            /* Chat layout stacking */
+            .assembly-layout { flex-direction: column; }
+            .player-list-sidebar { width: 100%; max-height: 200px; border-right: none; border-bottom: 1px solid #ddd; }
+            .chat-main { flex-grow: 1; }
         }
         
-        /* --- REMOVED: Online/Offline Status Dot --- */
-
-        /* --- 2. Header & Navigation --- */
-        #header-bar {
-            background-color: var(--color-white);
-            box-shadow: var(--shadow);
-            padding: 15px 20px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        #header-logged-out {
-            text-align: right;
-        }
-        
-        /* MODIFIED: Logged out header title replaced by button */
-        #header-logged-out .btn {
-            font-size: 0.95rem;
-            font-weight: 600;
-        }
-
-
-        #header-logged-in {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .profile-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .profile-avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-            color: var(--color-white);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            border: 2px solid var(--color-white);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .profile-name-role span {
-            display: block;
-        }
-
-        .profile-name {
-            font-weight: 600;
-            font-size: 1.1rem;
-        }
-
-        .profile-role {
-            font-size: 0.9rem;
-            color: var(--color-dark-gray);
-            text-transform: capitalize;
-        }
-
-        .header-nav .btn {
-            margin-left: 10px;
-        }
-
-        /* --- 3. Buttons & Forms --- */
-        .btn {
-            padding: 10px 18px;
-            border-radius: var(--radius);
-            border: none;
-            cursor: pointer;
-            font-family: 'Poppins', sans-serif;
-            font-weight: 600;
-            font-size: 0.95rem;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-            color: var(--color-white);
-        }
-
-        .btn-primary:hover {
-            opacity: 0.9;
-            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
-        }
-
-        .btn-secondary {
-            background-color: #6c757d;
-            color: var(--color-white);
-        }
-
-        .btn-danger {
-            background-color: #dc3545;
-            color: var(--color-white);
-        }
-
-        .btn-success {
-            background-color: #28a745;
-            color: var(--color-white);
-        }
-
-        .btn-warning {
-            background-color: #ffc107;
-            color: var(--color-text);
-        }
-
-        .btn-icon {
-            padding: 8px 10px;
-            font-size: 1.1rem;
-        }
-        
-        .btn-sm {
-            padding: 3px 6px;
-            font-size: 0.75rem;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
-
+        /* 6. Form & UI Elements */
+        .card { background-color: var(--color-bg-card); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: var(--shadow-medium); }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
         .form-control {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--color-medium-gray);
-            border-radius: var(--radius);
-            font-family: 'Roboto', sans-serif;
-            font-size: 1rem;
+            width: 100%; padding: 0.75rem; background-color: #f0f2f5;
+            border: 1px solid #ddd; border-radius: 8px; color: var(--color-text-primary); font-size: 1rem;
         }
+        .form-control:focus { outline: none; border-color: var(--color-accent-blue); box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.2); }
+        .btn { padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; }
+        .btn-primary { background-color: var(--color-accent-blue); color: var(--color-text-light); }
+        .btn-primary:hover { background-color: var(--color-accent-blue-hover); }
+        .btn-success { background-color: var(--color-success); color: var(--color-text-light); }
+        .btn-danger { background-color: var(--color-danger); color: var(--color-text-light); }
+        .btn-warning { background-color: var(--color-warning); color: var(--color-text-primary); }
+        .btn-link { background: none; color: var(--color-accent-blue); padding: 0; cursor: pointer; font-size: 0.9rem; }
+        .error-message { color: var(--color-danger); background-color: rgba(248, 81, 73, 0.1); border: 1px solid var(--color-danger); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .loading-spinner {
+            border: 4px solid #f3f3f3; border-top: 4px solid var(--color-accent-blue);
+            border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;
+            margin: 1rem auto; display: none;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        select.form-control[multiple] {
-            height: auto;
-            padding: 10px;
-        }
+        /* 7. Auth Page */
+        .auth-container { max-width: 450px; margin: 3rem auto 0 auto; padding: 2rem; background-color: var(--color-bg-card); border-radius: 12px; box-shadow: var(--shadow-medium); }
+        .auth-container h2 { text-align: center; color: var(--color-text-primary); margin-bottom: 2rem; }
+        .auth-container .text-center { text-align: center; margin-top: 1.5rem; color: var(--color-text-secondary); }
 
-        textarea.form-control {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .card {
-            background-color: var(--color-white);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            padding: 25px;
-            margin-bottom: 20px;
-        }
-
-        .card-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: var(--color-primary-dark);
-            border-bottom: 2px solid var(--color-light-gray);
-            padding-bottom: 10px;
-        }
-
-        .alert {
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: var(--radius);
-            font-weight: 500;
-        }
-        .alert-danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .alert-info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
-
-        /* --- 4. Page-Specific Styles --- */
-        /* Login & Register */
-        #login-page, #register-page {
-            justify-content: center;
-            padding-top: 40px;
-        }
-        .form-container {
-            max-width: 500px;
-            width: 100%;
-            margin: 0 auto;
-        }
-        .form-container .card-title {
-            text-align: center;
-        }
-        .form-footer {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .form-footer a {
-            color: var(--color-primary);
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        /* Home Page */
-        .home-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-
-        .home-button {
-            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-            color: var(--color-white);
-            padding: 20px;
-            border-radius: var(--radius);
-            text-align: center;
-            font-size: 1.2rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.1);
-        }
-        .home-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 12px rgba(0, 123, 255, 0.2);
-        }
-        .home-button.leader-btn {
-            background: linear-gradient(135deg, #ffc107, #e0a800);
-            color: #333;
-        }
-        /* NEW: Ranking buttons style */
-        .home-button.ranking-btn {
-             background: linear-gradient(135deg, #17a2b8, #138496);
-        }
-        .home-button.image-btn {
-            background: linear-gradient(135deg, #6610f2, #510bc4);
-        }
-
-        .cabinet-list {
-            margin-top: 30px;
-        }
-        .cabinet-list h3 {
-            margin-bottom: 10px;
-        }
-        .cabinet-list span {
-            display: inline-block;
-            background-color: #e9ecef;
-            padding: 5px 10px;
-            border-radius: 5px;
-            margin-right: 5px;
-            font-weight: 500;
-        }
-
-        /* Assembly (Chat) */
+        /* 8. NEW: Two-Column Chat Layout */
         .assembly-layout {
             display: flex;
-            gap: 20px;
-            height: calc(100vh - 160px);
+            height: 80vh; /* Full height layout */
+            background: var(--color-bg-card);
+            border-radius: 12px;
+            box-shadow: var(--shadow-medium);
+            overflow: hidden;
         }
         .player-list-sidebar {
-            flex: 0 0 250px;
-            background-color: var(--color-white);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
+            width: 250px;
+            background: #f0f2f5;
+            border-right: 1px solid #ddd;
             overflow-y: auto;
-            padding: 15px;
+            flex-shrink: 0;
+        }
+        .player-list-sidebar h3 {
+            padding: 1rem;
+            margin-bottom: 0;
+            border-bottom: 1px solid #ddd;
+            font-size: 1.1rem;
+            position: sticky; top: 0; background: #f0f2f5;
         }
         .player-list-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 8px;
-            border-bottom: 1px solid var(--color-light-gray);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e0e0e0;
         }
-        .player-list-item:last-child {
-            border-bottom: none;
-        }
-        .player-list-item .avatar {
-            width: 30px;
-            height: 30px;
-            font-size: 0.9rem;
-        }
-        
-        /* --- REMOVED: Player List Online Status --- */
-        .player-list-info {
-            flex-grow: 1;
-        }
-        .player-list-item .name { font-weight: 600; }
-        .player-list-item .role { font-size: 0.8rem; color: var(--color-dark-gray); }
-        
-        
-        .chat-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background-color: var(--color-white);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            overflow: hidden;
-        }
-        
-        /* ★★★ NEW: Pinned Message ★★★ */
-        .pinned-message {
-            padding: 10px 15px;
-            background-color: #fff8e1;
-            border-bottom: 1px solid #ffeeba;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.9rem;
-        }
-        .pinned-message-content {
-            font-weight: 500;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        
-        .chat-box {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* ★★★ NEW: Chat Message Actions (Pin/Delete) ★★★ */
-        .message-actions {
-            display: none; /* Hide by default */
-            margin-left: 10px;
-            margin-right: 10px;
-            align-self: center;
-        }
-        .chat-message:hover .message-actions {
-            display: block; /* Show on hover */
-        }
-        .message-actions .btn-icon {
-            padding: 2px 5px;
-            font-size: 0.8rem;
-            background: none;
-            border: none;
-            color: var(--color-dark-gray);
-            cursor: pointer;
-        }
-        .message-actions .btn-icon:hover {
-            color: var(--color-primary);
-        }
-
-        .chat-message {
-            max-width: 80%;
-            margin-bottom: 15px;
-            display: flex;
-            gap: 10px;
-        }
-        .chat-message .avatar {
-            width: 35px;
-            height: 35px;
-            font-size: 1rem;
-            flex-shrink: 0;
-        }
-        .message-content {
-            border-radius: var(--radius);
-            padding: 10px 15px;
-        }
-        
-        /* ★★★ NEW: "Me" (Right) vs "Other" (Left) styles ★★★ */
-        .chat-message.other {
-            flex-direction: row; /* Default */
-            align-self: flex-start;
-        }
-        .chat-message.me {
-            flex-direction: row-reverse; /* My messages on the right */
-            align-self: flex-end;
-        }
-        .chat-message.me .message-content {
-            background-color: var(--color-me-message-bg);
-        }
-        .chat-message.other .message-content {
-            background-color: var(--color-light-gray);
-        }
-        
-        .message-sender {
-            font-weight: 600;
-            font-size: 0.9rem;
-            margin-bottom: 5px;
-        }
-        .message-text {
-            word-wrap: break-word;
-        }
-        .message-timestamp {
-            font-size: 0.75rem;
-            color: var(--color-dark-gray);
-            margin-top: 5px;
-        }
-        
-        /* ★★★ NEW: Media (Image/Video) in chat ★★★ */
-        .message-media {
-            margin-top: 10px;
-        }
-        .message-media img,
-        .message-media video {
-            max-width: 100%;
-            border-radius: var(--radius);
-            max-height: 300px;
-            cursor: pointer;
-        }
-        .message-media-download {
-            display: inline-block;
-            padding: 8px 12px;
-            background-color: var(--color-primary);
-            color: var(--color-white);
-            border-radius: var(--radius);
-            text-decoration: none;
-            font-weight: 600;
-        }
-        
-        /* Special Assembly Styles (Overrides) */
-        .message-leader .message-content {
-            background-color: #fff8e1; /* Light gold */
-            border: 1px solid var(--color-leader);
-        }
-        .message-leader .message-sender {
-            color: #b8860b; /* Dark Gold */
-            font-weight: 700;
-        }
-        .message-coleader .message-content {
-            background-color: #f8f9fa; /* Light silver */
-            border: 1px solid var(--color-coleader);
-        }
-        .message-coleader .message-sender {
-            color: #5a6268; /* Dark Silver */
-            font-weight: 700;
-        }
-        
-        /* Override for "me" special roles */
-        .chat-message.me.message-leader .message-content,
-        .chat-message.me.message-coleader .message-content {
-             background-color: var(--color-me-message-bg); /* Keep "me" green */
-        }
-
-
-        /* --- ★★★ MODIFIED CHAT CONTROLS ★★★ --- */
-        .chat-controls-container {
-            padding: 10px 20px 0 20px;
-            background-color: #fdfdfd;
-            border-top: 1px solid var(--color-light-gray);
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            flex-wrap: wrap; /* For responsiveness */
-        }
-        .chat-controls-container label {
-            font-weight: 600;
-            font-size: 0.9rem;
-            margin-right: 5px;
-        }
-        .chat-controls-container select {
-            padding: 5px;
-            border-radius: var(--radius);
-            border: 1px solid var(--color-medium-gray);
-            font-family: 'Roboto', sans-serif;
-        }
-        .chat-controls-container input[type="color"] {
+        .avatar {
             width: 40px;
-            height: 30px;
-            padding: 0 2px;
-            border: 1px solid var(--color-medium-gray);
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        /* ★★★ NEW: File Input Wrapper ★★★ */
-        .file-input-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-        }
-        .file-input-wrapper .btn {
-            padding: 10px 12px;
-            font-size: 1.1rem;
-        }
-        .file-input-wrapper input[type=file] {
-            font-size: 100px;
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .chat-input-form {
+            height: 40px;
+            border-radius: 50%;
+            background: var(--color-accent-blue);
+            color: white;
             display: flex;
-            padding: 10px 20px 20px 20px;
-            background-color: #fdfdfd;
-            align-items: center; /* Align file button */
-        }
-        
-        .chat-input-form input[type="text"] {
-            flex: 1;
-            margin: 0;
-            border-right: 0;
-            border-top-right-radius: 0;
-            border-bottom-right-radius: 0;
-        }
-        .chat-input-form .btn { /* Submit button */
-            border-top-left-radius: 0;
-            border-bottom-left-radius: 0;
-        }
-        
-        /* --- NEW: Login Prompt Overlay --- */
-        /* This is now a generic prompt for any action */
-        .action-login-prompt {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            text-align: center;
-            border-top: 1px solid var(--color-medium-gray);
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
-            gap: 15px;
-        }
-        .action-login-prompt h3 {
-            color: var(--color-primary-dark);
-        }
-        
-        /* Wrapper for forms that can be hidden */
-        .login-gated-container {
-            position: relative;
-        }
-        /* Static prompt for forms not in an overlay */
-        .action-login-prompt.static {
-            position: static;
-            background: none;
-            box-shadow: none;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            margin-top: 20px;
-        }
-
-
-        /* Rules, Notices, Drafts */
-        .item-list .item-card {
-            background-color: var(--color-white);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            padding: 20px;
-            margin-bottom: 15px;
-            position: relative;
-        }
-        .item-card h3 {
-            color: var(--color-primary-dark);
-            margin-bottom: 10px;
-        }
-        .item-card p {
-            margin-bottom: 10px;
-        }
-        .item-meta {
-            font-size: 0.85rem;
-            color: var(--color-dark-gray);
-        }
-        .item-card .btn {
-            margin-top: 10px;
-        }
-        .leader-action-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-        }
-
-        /* Draft Detail Page */
-        .draft-status-bar {
-            padding: 15px;
-            border-radius: var(--radius);
             font-weight: 600;
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 1.1rem;
+            margin-right: 10px;
+            flex-shrink: 0;
         }
-        .status-advice { background-color: #fff3cd; color: #856404; }
-        .status-voting { background-color: #d1ecf1; color: #0c5460; }
-        .status-passed { background-color: #d4edda; color: #155724; }
-        .status-failed { background-color: #f8d7da; color: #721c24; }
-        .status-canceled { background-color: #e2e3e5; color: #383d41; }
-        .status-active { background-color: #cce5ff; color: #004085; }
-
-        .vote-options {
-            display: flex;
-            gap: 15px;
-            margin: 20px 0;
-        }
-        .vote-options .btn {
-            flex: 1;
-            font-size: 1.1rem;
-            padding: 15px;
-        }
-        
-        .vote-results {
-            margin-top: 20px;
-        }
-        .vote-summary {
-            background-color: var(--color-light-gray);
-            padding: 15px;
-            border-radius: var(--radius);
-            font-weight: 500;
-        }
-
-        .advice-section .advice-item {
-            border-bottom: 1px solid var(--color-light-gray);
-            padding: 10px 0;
-        }
-        .advice-section .advice-item:last-child {
-            border-bottom: none;
-        }
-        .advice-sender {
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        /* Leader Dashboard & Player Lists */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-        }
-        .dashboard-button {
-            display: block;
-            background-color: var(--color-white);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            padding: 25px;
-            text-align: center;
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: var(--color-primary-dark);
-            text-decoration: none;
-            transition: all 0.2s ease;
-        }
-        .dashboard-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-        }
-        
-        .player-table-container {
-            overflow-x: auto;
-        }
-        .player-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        .player-table th, .player-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid var(--color-medium-gray);
-            text-align: left;
-        }
-        .player-table th {
-            background-color: var(--color-light-gray);
-            font-weight: 700;
-        }
-        .player-table td .btn {
-            padding: 5px 8px;
-            font-size: 0.85rem;
-            margin-right: 5px;
-        }
-
-        /* --- NEW: PDF and Image Ranking Styles --- */
-        .pdf-list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            background: #fff;
-            border-radius: var(--radius);
-            margin-bottom: 10px;
-            box-shadow: var(--shadow);
-        }
-        .pdf-info h4 {
-            color: var(--color-primary-dark);
-            margin-bottom: 5px;
-        }
-        .pdf-info p {
-            font-size: 0.9rem;
-            color: var(--color-dark-gray);
-        }
-        
-        .image-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-        .image-card {
-            background: #fff;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
+        .player-list-item .info {
             overflow: hidden;
-            text-align: center;
+            white-space: nowrap;
         }
-        .image-card img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
+        .player-list-item .info .name {
+            font-weight: 600;
+            display: block;
+            color: var(--color-text-primary);
         }
-        .image-card-info {
-            padding: 15px;
-        }
-        .image-card-info h4 {
-            margin-bottom: 10px;
+        .player-list-item .info .role {
+            font-size: 0.8rem;
+            color: var(--color-text-secondary);
         }
         
-        /* Leader Management for PDF/Image */
-        .management-list-item {
+        .chat-main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* 9. NEW: Pinned Message */
+        .pinned-message {
+            padding: 0.5rem 1rem;
+            background: var(--color-bg-card);
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px;
-            background: var(--color-light-gray);
-            border-radius: var(--radius);
-            margin-bottom: 10px;
+            flex-shrink: 0;
         }
-        .management-list-item span {
+        .pinned-message-content {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pinned-message-content strong { color: var(--color-accent-blue); }
+        .unpin-btn {
+            background: none; border: none; color: var(--color-text-secondary);
+            cursor: pointer; font-size: 1.2rem;
+        }
+
+        /* 10. NEW: Chat Styles (WhatsApp Theme) */
+        .chat-window {
+            height: 100%; /* Takes remaining space */
+            background-color: var(--color-bg-chat-window);
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column-reverse; /* New messages at bottom */
+            flex-grow: 1; /* Key change */
+        }
+        .chat-messages { display: flex; flex-direction: column; gap: 0.5rem; }
+        .chat-message {
+            max-width: 70%; padding: 0.5rem 0.75rem; border-radius: 8px;
+            word-wrap: break-word; box-shadow: var(--shadow-light);
+            position: relative;
+        }
+        .chat-message .msg-content { font-size: 1rem; margin: 0; padding: 0; color: var(--color-text-primary); }
+        .chat-message .msg-timestamp { display: block; font-size: 0.7rem; color: var(--color-text-secondary); margin-top: 0.25rem; text-align: right; }
+        
+        /* Me vs Other */
+        .chat-message.self { background-color: var(--color-chat-self); align-self: flex-end; }
+        .chat-message.other { background-color: var(--color-chat-other); align-self: flex-start; }
+        
+        /* Role Styling */
+        .chat-message.other.message-leader { background-color: var(--color-leader); border: 1px solid #ffecb3; }
+        .chat-message.other.message-coleader { background-color: var(--color-coleader); border: 1px solid #e0e0e0; }
+        
+        .message-sender {
+            display: block; font-weight: 700; font-size: 0.9rem;
+            margin-bottom: 0.25rem; color: var(--color-accent-blue);
+        }
+        .message-media { max-width: 100%; border-radius: 8px; margin-top: 0.5rem; }
+        .message-media img { max-width: 100%; cursor: pointer; }
+        .message-media video { max-width: 100%; }
+        
+        /* Leader Actions */
+        .message-actions {
+            display: none; /* Hidden by default */
+            position: absolute;
+            top: -10px;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: var(--shadow-medium);
+            z-index: 10;
+        }
+        .chat-message:hover .message-actions { display: flex; }
+        .message-actions button {
+            background: none; border: none; padding: 0.5rem; cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .message-actions button:hover { background: #f0f0f0; }
+
+        /* Chat Controls & Input */
+        .chat-controls-container {
+            padding: 0.5rem 1rem;
+            background: #f0f2f5;
+            border-top: 1px solid #ddd;
+            flex-shrink: 0;
+        }
+        .chat-controls-container select, .chat-controls-container input {
+            padding: 0.25rem;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .chat-input-form {
+            display: flex; gap: 0.5rem; background: #f0f2f5;
+            padding: 0.5rem 1rem; border-top: 1px solid #ddd; flex-shrink: 0;
+        }
+        .chat-input-form input[type="text"] { flex-grow: 1; }
+        .attach-btn {
+            position: relative; cursor: pointer; padding: 0.75rem 1rem;
+            background: var(--color-text-secondary); color: white;
+        }
+        .attach-btn:hover { background: var(--color-accent-blue); }
+        .attach-btn input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        
+        /* Login Prompt */
+        .login-prompt-overlay {
+            text-align: center; padding: 1rem; background: rgba(255,255,255,0.8);
+            border: 1px dashed var(--color-text-secondary); border-radius: 8px; margin-top: 1rem;
+        }
+        .login-prompt-overlay p { margin: 0; color: var(--color-text-primary); font-weight: 500; }
+        .login-prompt-overlay .btn-link { font-weight: 600; font-size: 1rem; }
+
+        /* 11. Ranking Grids */
+        .ranking-grid-image { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+        .ranking-card-image { background-color: var(--color-bg-card); border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-medium); }
+        .ranking-card-image img { width: 100%; height: 200px; object-fit: cover; display: block; cursor: pointer; }
+        .ranking-card-image h4 { padding: 1rem; text-align: center; margin-bottom: 0; }
+        .ranking-list-pdf .ranking-item-pdf {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1rem 1.5rem; background-color: var(--color-bg-card);
+            border: 1px solid #eee; border-radius: 8px; margin-bottom: 1rem;
+        }
+        .ranking-item-pdf .info h4 { margin-bottom: 0.25rem; }
+        .ranking-item-pdf .info p { margin-bottom: 0; font-size: 0.9rem; }
+        
+        /* 12. Voting & Drafts */
+        .draft-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        .draft-card {
+            background-color: var(--color-bg-card); padding: 1.5rem; border-radius: 12px;
+            cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: var(--shadow-light);
+        }
+        .draft-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-medium); }
+        .draft-card h3 { color: var(--color-accent-blue); margin-bottom: 0.5rem; }
+        .draft-status {
+            font-weight: 600; padding: 0.25rem 0.5rem; border-radius: 6px;
+            font-size: 0.9rem; display: inline-block; color: var(--color-text-primary);
+        }
+        .draft-status.advice { background-color: var(--color-warning); }
+        .draft-status.voting { background-color: var(--color-accent-blue); color: white; }
+        .draft-status.passed_pending_activation { background-color: var(--color-success); color: white; }
+        .draft-status.failed { background-color: var(--color-danger); color: white; }
+        .draft-status.canceled { background-color: #aaa; color: white; }
+        .draft-status.active { background-color: #ffc978; }
+        .countdown-timer { font-size: 1.2rem; font-weight: 600; color: var(--color-accent-blue); margin-bottom: 1rem; }
+        .vote-buttons { display: flex; gap: 1rem; margin-bottom: 1rem; }
+        .vote-buttons .btn { flex-grow: 1; }
+
+        /* 13. Leader Dashboard */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .dashboard-grid-btn {
+            background-color: var(--color-bg-card); color: var(--color-text-primary); padding: 1.5rem;
+            border-radius: 12px; text-align: center; font-size: 1.2rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s ease; box-shadow: var(--shadow-light);
+        }
+        .dashboard-grid-btn:hover { background-color: var(--color-accent-blue); color: white; box-shadow: var(--shadow-medium); }
+        .leader-section { display: none; }
+        .leader-section.active { display: block; }
+        .leader-back-btn { margin-bottom: 1.5rem; }
+        .mgmt-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .mgmt-table th, .mgmt-table td { padding: 0.75rem 1rem; border: 1px solid #eee; text-align: left; vertical-align: middle; }
+        .mgmt-table th { background-color: #f9f9f9; }
+        .mgmt-table td .btn { padding: 0.4rem 0.8rem; font-size: 0.8rem; margin-right: 0.25rem; }
+        .mgmt-table td .form-control { font-size: 0.9rem; padding: 0.5rem; }
+        .registration-password { font-family: 'Courier New', Courier, monospace; background: #eee; padding: 0.25rem 0.5rem; border-radius: 4px; color: var(--color-text-primary); font-weight: 700; }
+        
+        /* NEW: Upload Progress */
+        .upload-progress-container {
+            margin-top: 1rem;
             font-weight: 600;
         }
 
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .assembly-layout {
-                flex-direction: column;
-                height: auto;
-            }
-            .player-list-sidebar {
-                flex: 0 0 auto;
-                max-height: 200px;
-            }
-            .chat-main {
-                height: 60vh;
-            }
-            .header-nav {
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
-                align-items: flex-end;
-            }
-            .profile-name-role {
-                display: none;
-            }
+        /* 14. NEW: Player Dashboard */
+        #page-player-dashboard .widget {
+            background: var(--color-bg-card);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-light);
+        }
+        #page-player-dashboard .widget h3 {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+        .chat-log {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        .chat-log p { margin-bottom: 0.5rem; font-size: 0.9rem; }
+        
+        /* 15. NEW: Force Mode Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .modal-content {
+            background: var(--color-bg-card);
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+        }
+        .modal-content h3 { margin-top: 0; }
+        #modal-captcha-image {
+            background: #f0f2f5;
+            padding: 1rem;
+            font-size: 2rem;
+            font-family: 'Courier New', Courier, monospace;
+            letter-spacing: 5px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            user-select: none;
+        }
+        #word-count {
+            font-size: 0.9rem;
+            color: var(--color-text-secondary);
         }
 
     </style>
 </head>
 <body>
-    <audio id="chat-notification-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-message-pop-alert-2354.mp3" preload="auto"></audio>
 
-    <div id="app">
-        <header id="header-bar">
-            <div id="header-logged-out">
-                <button class="btn btn-primary" data-action="show-login">Login / Register</button>
-            </div>
-            <div id="header-logged-in" style="display: none;">
-                <div class="profile-info">
-                    <div id="user-avatar" class="profile-avatar"></div>
-                    <div class="profile-name-role">
-                        <span id="user-name" class="profile-name"></span>
-                        <span id="user-role" class="profile-role"></span>
-                    </div>
+    <div class="app-container">
+        
+        <aside class="sidebar" id="app-sidebar">
+            <button class="sidebar-close-btn" id="sidebar-close-btn">&times;</button>
+            <div class="sidebar-header">
+                <h2>Clan Hub</h2>
+                
+                <div class="user-profile-sidebar hidden" id="user-profile-sidebar">
+                    <h3 id="sidebar-username">Player Name</h3>
+                    <p id="sidebar-userrole">Role</p>
                 </div>
-                <nav class="header-nav">
-                    <button class="btn btn-primary" data-action="show-home">🏠 Home</button>
-                    <button id="logout-button" class="btn btn-secondary" data-action="logout">Logout</button>
-                </nav>
-            </div>
-        </header>
-
-        <main class="container">
-            <div id="login-page" class="page">
-                <div class="form-container">
-                    <div class="card">
-                        <h2 class="card-title">Clan Portal Login</h2>
-                        <div id="login-error" class="alert alert-danger" style="display: none;"></div>
-                        <form id="login-form">
-                            <div class="form-group">
-                                <label for="login-id">Player ID</label>
-                                <input type="text" id="login-id" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="login-password">Password</label>
-                                <input type="password" id="login-password" class="form-control" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
-                        </form>
-                        <div class="form-footer">
-                            Don't have an account? <a data-action="show-register">Register here</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="register-page" class="page">
-                <div class="form-container">
-                    <div class="card">
-                        <h2 class="card-title">New Player Registration</h2>
-                        <form id="register-form">
-                            <div class="form-group">
-                                <label for="reg-player-id">Player ID (User ID)</label>
-                                <input type="text" id="reg-player-id" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-player-name">Player Name</label>
-                                <input type="text" id="reg-player-name" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-clan-name">Clan Name</label>
-                                <input type="text" id="reg-clan-name" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-clan-id">Clan ID</label>
-                                <input type="text" id="reg-clan-id" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-dob">Date of Birth</label>
-                                <input type="date" id="reg-dob" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-country">Country</label>
-                                <select id="reg-country" class="form-control" required>
-                                    <option value="">-- Select Country --</option>
-                                    <option value="India">India</option>
-                                    <option value="China">China</option>
-                                    <option value="Vietnam">Vietnam</option>
-                                    <option value="Indonesia">Indonesia</option>
-                                    <option value="Japan">Japan</option>
-                                    <option value="South Korea">South Korea</option>
-                                    <option value="Philippines">Philippines</option>
-                                    <option value="Thailand">Thailand</option>
-                                    <option value="Malaysia">Malaysia</option>
-                                    <option value="Singapore">Singapore</option>
-                                    <option value="Other">Other (Asia)</option>
-                                </select>
-                            </div>
-                            <div class="form-group" id="india-states-group" style="display: none;">
-                                <label for="reg-india-state">State / Union Territory</label>
-                                <select id="reg-india-state" class="form-control">
-                                    <option value="">-- Select State/UT --</option>
-                                    <option value="Andhra Pradesh">Andhra Pradesh</option>
-                                    <option value="Arunachal Pradesh">Arunachal Pradesh</option>
-                                    <option value="Assam">Assam</option>
-                                    <option value="Bihar">Bihar</option>
-                                    <option value="Chhattisgarh">Chhattisgarh</option>
-                                    <option value="Goa">Goa</option>
-                                    <option value="Gujarat">Gujarat</option>
-                                    <option value="Haryana">Haryana</option>
-                                    <option value="Himachal Pradesh">Himachal Pradesh</option>
-                                    <option value="Jharkhand">Jharkhand</option>
-                                    <option value="Karnataka">Karnataka</option>
-                                    <option value="Kerala">Kerala</option>
-                                    <option value="Madhya Pradesh">Madhya Pradesh</option>
-                                    <option value="Maharashtra">Maharashtra</option>
-                                    <option value="Manipur">Manipur</option>
-                                    <option value="Meghalaya">Meghalaya</option>
-                                    <option value="Mizoram">Mizoram</option>
-                                    <option value="Nagaland">Nagaland</option>
-                                    <option value="Odisha">Odisha</option>
-                                    <option value="Punjab">Punjab</option>
-                                    <option value="Rajasthan">Rajasthan</option>
-                                    <option value="Sikkim">Sikkim</option>
-                                    <option value="Tamil Nadu">Tamil Nadu</option>
-                                    <option value="Telangana">Telangana</option>
-                                    <option value="Tripura">Tripura</option>
-                                    <option value="Uttar Pradesh">Uttar Pradesh</option>
-                                    <option value="Uttarakhand">Uttarakhand</option>
-                                    <option value="West Bengal">West Bengal</option>
-                                    <option value="Andaman and Nicobar">Andaman and Nicobar Islands</option>
-                                    <option value="Chandigarh">Chandigarh</option>
-                                    <option value="Dadra and Nagar Haveli">Dadra and Nagar Haveli and Daman and Diu</option>
-                                    <option value="Delhi">Delhi</option>
-                                    <option value="Jammu and Kashmir">Jammu and Kashmir</option>
-                                    <option value="Ladakh">Ladakh</option>
-                                    <option value="Lakshadweeep">Lakshadweeep</option>
-                                    <option value="Puducherry">Puducherry</option>
-                                </select>
-                            </div>
-                            <div class="form-group" id="other-region-group" style="display: none;">
-                                <label for="reg-other-region">Region / State</label>
-                                <input type="text" id="reg-other-region" class="form-control">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="reg-lang-primary">Primary Language (Compulsory)</label>
-                                <select id="reg-lang-primary" class="form-control" required disabled>
-                                    <option value="English" selected>English</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-lang-secondary">Secondary Languages (Select at least 1)</label>
-                                <select id="reg-lang-secondary" class="form-control" multiple size="8">
-                                    <option value="Mandarin Chinese">Mandarin Chinese</option>
-                                    <option value="Hindi">Hindi</option>
-                                    <option value="Bengali">Bengali</option>
-                                    <option value="Japanese">Japanese</option>
-                                    <option value="Vietnamese">Vietnamese</option>
-                                    <option value="Korean">Korean</option>
-                                    <option value="Tamil">Tamil</option>
-                                    <option value="Urdu">Urdu</option>
-                                    <option value="Javanese">Javanese</option>
-                                    <option value="Telugu">Telugu</option>
-                                    <option value="Turkish">Turkish</option>
-                                    <option value="Marathi">Marathi</option>
-                                    <option value="Thai">Thai</option>
-                                    <option value="Malay/Indonesian">Malay/Indonesian</option>
-                                    <option value="Filipino (Tagalog)">Filipino (Tagalog)</option>
-                                </select>
-                                <small>Hold Ctrl (or Cmd on Mac) to select multiple.</small>
-                            </div>
-                            <div class="form-group">
-                                <label for="reg-role">Select Your Role</label>
-                                <select id="reg-role" class="form-control" required>
-                                    <option value="Member" selected>Member</option>
-                                    <option value="Elder">Elder</option>
-                                    <option value"Co-Leader">Co-Leader</option>
-                                </select>
-                                <small>Leader role cannot be registered.</small>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">Register</button>
-                        </form>
-                        <div class="form-footer">
-                            Already have an account? <a data-action="show-login">Login here</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="home-page" class="page active">
-                <div class="home-grid" id="home-buttons-grid">
-                    </div>
-                <div class="card cabinet-list">
-                    <h3>👑 Cabinet Players</h3>
-                    <div id="cabinet-player-list">
-                        </div>
+                
+                <div class="sidebar-auth-links" id="sidebar-auth-links">
+                    <button class="btn btn-primary" id="sidebar-login-btn">Login</button>
+                    <button class="btn-link" id="sidebar-register-btn">Register</button>
                 </div>
             </div>
             
-            <div id="general-assembly-page" class="page">
-                <div class="assembly-layout">
-                    <div class="player-list-sidebar">
-                        <h3>All Players</h3>
-                        <div id="ga-player-list"></div>
-                    </div>
-                    <div class="chat-main">
-                        <div class="card-title" style="padding: 15px 20px; margin: 0; border-radius: 0;">🗣 General Assembly</div>
-                        
-                        <div id="ga-pinned-message" class="pinned-message" style="display: none;"></div>
-
-                        <div class="chat-box" id="ga-chat-box">
-                            </div>
-                        
-                        <div id="ga-controls-container" class="chat-controls-container">
-                            </div>
-
-                        <div id="ga-chat-input-area" class="login-gated-container">
-                            <form id="ga-chat-form" class="chat-input-form">
-                                <div class="file-input-wrapper">
-                                    <button type="button" class="btn btn-secondary">📎</button>
-                                    <input type="file" id="ga-file-input" accept="image/*,video/*">
-                                </div>
-                                <input type="text" id="ga-chat-input" class="form-control" placeholder="Type your message..." autocomplete="off">
-                                <button type="submit" class="btn btn-primary">Send</button>
-                            </form>
-                            
-                            <div id="ga-login-prompt" class="action-login-prompt" style="display: none;">
-                                <h3>Login Required</h3>
-                                <p>You must login or register to send messages.</p>
-                                <button class="btn btn-primary" data-action="show-login">Login Now</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="special-assembly-page" class="page">
-                 <div class="assembly-layout">
-                    <div class="player-list-sidebar">
-                        <h3>Leadership</h3>
-                        <div id="sa-player-list"></div>
-                    </div>
-                    <div class="chat-main">
-                        <div class="card-title" style="padding: 15px 20px; margin: 0; border-radius: 0;">👑 Special Assembly</div>
-                        
-                        <div id="sa-pinned-message" class="pinned-message" style="display: none;"></div>
-                        
-                        <div class="chat-box" id="sa-chat-box">
-                            </div>
-                        
-                        <div id="sa-controls-container" class="chat-controls-container">
-                            </div>
-                        
-                        <div id="sa-chat-input-area" class="login-gated-container">
-                            <form id="sa-chat-form" class="chat-input-form">
-                                <div class="file-input-wrapper">
-                                    <button type="button" class="btn btn-secondary">📎</button>
-                                    <input type="file" id="sa-file-input" accept="image/*,video/*">
-                                </div>
-                                <input type="text" id="sa-chat-input" class="form-control" placeholder="Type your message..." autocomplete="off">
-                                <button type="submit" class="btn btn-primary">Post</button>
-                            </form>
-                            
-                            <div id="sa-login-prompt" class="action-login-prompt" style="display: none;">
-                                <h3>Login Required</h3>
-                                <p>You must login or register to send messages.</p>
-                                <button class="btn btn-primary" data-action="show-login">Login Now</button>
-                            </div>
-                        </div>
-
-                        <div id="sa-post-error" class="alert alert-danger" style="display: none; margin: 20px;">Only Leader and Co-Leaders can post here.</div>
-                    </div>
-                </div>
-            </div>
-            <div id="notice-board-page" class="page">
-                <div class="card">
-                    <h2 class="card-title">📢 Notice Board</h2>
-                    <div id="notice-board-post-form" style="display: none;">
-                        <h3>Post a New Notice</h3>
-                        <form id="new-notice-form">
-                            <div class="form-group">
-                                <label for="notice-title">Title</label>
-                                <input type="text" id="notice-title" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="notice-content">Content</label>
-                                <textarea id="notice-content" class="form-control" required></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Post Notice</button>
-                        </form>
-                    </div>
-                    <div class="item-list" id="notice-list" style="margin-top: 20px;">
-                        </div>
-                </div>
-            </div>
-
-            <div id="drafts-voting-page" class="page">
-                <div class="card">
-                    <h2 class="card-title">⚖️ Drafts & Voting</h2>
-                    <div class="item-list" id="drafts-list">
-                        </div>
-                </div>
-            </div>
-
-            <div id="draft-detail-page" class="page">
-                <div class="card">
-                    <button class="btn btn-secondary" data-action="show-drafts-voting" style="margin-bottom: 20px;">&larr; Back to Drafts</button>
-                    <h2 class="card-title" id="draft-detail-title"></h2>
-                    <div class="draft-status-bar" id="draft-detail-status"></div>
-                    <div id="draft-detail-timer" class="alert alert-info"></div>
-                    <p id="draft-detail-description"></p>
-
-                    <div id="draft-results-section" style="display: none;">
-                        <h3>Vote Results</h3>
-                        <div class="vote-results">
-                            <pre id="draft-vote-summary" class="vote-summary"></pre>
-                        </div>
-                        <div id="draft-leader-activation-section" style="display: none; margin-top: 20px;">
-                            <button id="draft-activate-btn" class="btn btn-success" style="width: 100%; padding: 15px; font-size: 1.2rem;">Notify & Activate Law</button>
-                        </div>
-                    </div>
-
-                    <div id="draft-voting-section" class="login-gated-container" style="display: none;">
-                        <h3>Cast Your Vote</h3>
-                        <div id="draft-vote-error" class="alert alert-danger" style="display: none;"></div>
-                        <div class="vote-options">
-                            <button class="btn btn-success" data-action="draft-vote" data-vote="yes">✅ Yes</button>
-                            <button class="btn btn-danger" data-action="draft-vote" data-vote="no">❌ No</button>
-                            <button class="btn btn-secondary" data-action="draft-vote" data-vote="absent">⚪ Absent</button>
-                        </div>
-                        
-                        <div id="draft-vote-login-prompt" class="action-login-prompt static" style="display: none;">
-                            <h3>Login Required</h3>
-                            <p>You must login to vote on this draft.</p>
-                            <button class="btn btn-primary" data-action="show-login">Login to Vote</button>
-                        </div>
-                    </div>
+            <nav>
+                <ul>
+                    <li><a href="#" class="nav-link" data-page="home">Home</a></li>
+                    <li><a href="#" class="nav-link" data-page="player-dashboard">My Dashboard</a></li>
+                    <li><a href="#" class="nav-link" data-page="chat-general">General Chat</a></li>
+                    <li><a href="#" class="nav-link" data-page="rules">Rules & Laws</a></li>
+                    <li><a href="#" class="nav-link" data-page="drafts-list">Voting (Drafts)</a></li>
+                    <li><a href="#" class="nav-link" data-page="notice-board">Notice Board</a></li>
+                    <li><a href="#" class="nav-link" data-page="rankings-pdf">PDF Rankings</a></li>
+                    <li><a href="#" class="nav-link" data-page="rankings-image">Image Rankings</a></li>
+                    <li><a href="#" class="nav-link" data-page="leader-dm">Leader Private Message</a></li>
+                    <li><a href="#" class="nav-link" data-page="advisory">Give Advice</a></li>
                     
-                    <div id="draft-advice-section" class="login-gated-container" style="display: none;">
-                        <hr style="margin: 20px 0;">
-                        <div class="advice-section">
-                            <h3>Public Advice</h3>
-                            <div id="draft-advice-list"></div>
-                        </div>
-                        <form id="draft-advice-form" style="margin-top: 20px;">
-                            <div class="form-group">
-                                <label for="draft-advice-input">Submit Your Advice</label>
-                                <textarea id="draft-advice-input" class="form-control" required></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Submit Advice</button>
-                        </form>
-                        
-                        <div id="draft-advice-login-prompt" class="action-login-prompt static" style="display: none;">
-                            <h3>Login Required</h3>
-                            <p>You must login to submit advice.</p>
-                            <button class="btn btn-primary" data-action="show-login">Login to Advise</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    <li class="nav-section-leader hidden" id="nav-special-chat-link">
+                         <a href="#" class="nav-link" data-page="chat-special">Special Assembly</a>
+                    </li>
+                    <li class="nav-section-leader hidden" id="nav-leader-link">
+                        <a href="#" class="nav-link" data-page="leader-dashboard">Leader Dashboard</a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <button class="logout-btn hidden" id="logout-btn">Logout</button>
+        </aside>
+        
+        <button class="hamburger-menu" id="hamburger-menu-btn">&#9776;</button>
 
-            <div id="leader-chat-page" class="page">
-                <div class="card form-container login-gated-container">
-                    <h2 class="card-title">💬 Leader Chat (Private Message)</h2>
-                    <div class="alert alert-info">Your message will be sent privately to the Leader.</div>
-                    <form id="leader-chat-form">
+        <main class="content-area" id="main-content">
+
+            <div class="page" id="page-login">
+                <div class="auth-container">
+                    <h2>Clan Hub Login</h2>
+                    <div class="error-message" id="login-error"></div>
+                    <form id="login-form">
                         <div class="form-group">
-                            <label for="leader-chat-subject">Subject</label>
-                            <input type="text" id="leader-chat-subject" class="form-control" required>
+                            <label for="login-id">Player ID</label>
+                            <input type="text" id="login-id" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label for="leader-chat-message">Message</label>
-                            <textarea id="leader-chat-message" class="form-control" required></textarea>
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" class="form-control" required>
                         </div>
-                        <button type="submit" class="btn btn-primary">Send Private Message</button>
+                        <div class="loading-spinner" id="login-spinner"></div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
                     </form>
-                    
-                    <div id="leader-chat-login-prompt" class="action-login-prompt static" style="display: none;">
-                        <h3>Login Required</h3>
-                        <p>You must login or register to send private messages.</p>
-                        <button class="btn btn-primary" data-action="show-login">Login Now</button>
+                    <div class="text-center">
+                        Don't have an account? 
+                        <button class="btn-link" id="goto-register-btn">Register here</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="page" id="page-register">
+                <div class="auth-container">
+                    <h2>New Registration</h2>
+                    <div class="error-message" id="register-error"></div>
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label for="reg-player-id">Player ID (e.g., #P0LYJCQ)</label>
+                            <input type="text" id="reg-player-id" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-player-name">Player Name</label>
+                            <input type="text" id="reg-player-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-clan-name">Clan Name</label>
+                            <input type="text" id="reg-clan-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-clan-id">Clan ID</label>
+                            <input type="text" id="reg-clan-id" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-dob">Date of Birth</label>
+                            <input type="date" id="reg-dob" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-country">Country</label>
+                            <select id="reg-country" class="form-control" required>
+                                <option value="">Select Country...</option>
+                                <option value="India">India</option>
+                                <option value="USA">USA</option>
+                                <option value="UK">UK</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-state">State / Region</label>
+                            <input type="text" id="reg-state" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-languages">Languages (comma-separated)</label>
+                            <input type="text" id="reg-languages" class="form-control" placeholder="e.g., English, Hindi">
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-role">Role</label>
+                            <select id="reg-role" class="form-control" required>
+                                <option value="Member">Member</option>
+                                <option value="Elder">Elder</option>
+                                <option value="Co-Leader">Co-Leader</option>
+                            </select>
+                        </div>
+                        <div class="loading-spinner" id="register-spinner"></div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Register</button>
+                    </form>
+                    <div class="text-center">
+                        Already have an account? 
+                        <button class="btn-link" id="goto-login-btn">Login here</button>
                     </div>
                 </div>
             </div>
 
-            <div id="rules-page" class="page">
+            <div class="page" id="page-home">
                 <div class="card">
-                    <h2 class="card-title">📜 Rules of Clan</h2>
-                    <div class="item-list" id="rules-list">
-                        </div>
+                    <h1>Welcome, <span id="home-username">Guest</span>!</h1>
+                    <p>This is the Clan Command Hub. Use the sidebar to navigate.</p>
+                    <p>You can view rules, rankings, and notices as a guest. To chat, vote, or use your dashboard, please log in or register.</p>
+                </div>
+                <div class="card">
+                    <h3>Pinned Message (General)</h3>
+                    <p id="pinned-message-ga">Loading...</p>
+                </div>
+                <div class="card">
+                    <h3>Pinned Message (Special Assembly)</h3>
+                    <p id="pinned-message-sa">Loading...</p>
                 </div>
             </div>
 
-            <div id="advisory-page" class="page">
-                <div class="card form-container login-gated-container">
-                    <h2 class="card-title">🧠 Advisory Committee</h2>
-                    <div class="alert alert-info">Submit your advice directly to the Leader's private dashboard.</div>
-                    <form id="advisory-form">
+            <div class="page" id="page-chat-general">
+                <h2>General Chat</h2>
+                <div class="assembly-layout">
+                    <aside class="player-list-sidebar">
+                        <h3>Active Players</h3>
+                        <div id="player-list-ga">
+                            </div>
+                    </aside>
+                    
+                    <div class="chat-main">
+                        <div class="pinned-message" id="pinned-message-bar-ga">
+                            <div class="pinned-message-content">
+                                <strong>📌 PINNED:</strong> <span id="pinned-content-ga">Loading...</span>
+                            </div>
+                            <button class="unpin-btn hidden" id="unpin-btn-ga" data-action="unpin-message" data-chat="ga">&times;</button>
+                        </div>
+                        
+                        <div class="chat-window" id="chat-window-ga">
+                            <div class="chat-messages" id="chat-messages-ga">
+                                </div>
+                        </div>
+                        
+                        <div class="chat-controls-container hidden" id="chat-controls-ga">
+                            </div>
+                        
+                        <form id="chat-form-ga" class="chat-input-form hidden">
+                            <label for="file-upload-ga" class="btn attach-btn">
+                                📎 <input type="file" id="file-upload-ga" accept="image/*,video/*">
+                            </label>
+                            <input type="text" id="chat-input-ga" class="form-control" placeholder="Type a message... (or attaching file)">
+                            <button type="submit" class="btn btn-primary">Send</button>
+                        </form>
+                        <div class="loading-spinner" id="chat-spinner-ga"></div>
+                        
+                        <div class="login-prompt-overlay" id="chat-login-prompt-ga">
+                            <p>Please <button class="btn-link" data-page="login">Login</button> or <button class="btn-link" data-page="register">Register</button> to join the chat.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="page" id="page-chat-special">
+                <h2>Special Assembly (Elders+)</h2>
+                <div class="assembly-layout">
+                    <aside class="player-list-sidebar">
+                        <h3>Assembly Members</h3>
+                        <div id="player-list-sa">
+                            </div>
+                    </aside>
+                    
+                    <div class="chat-main">
+                        <div class="pinned-message" id="pinned-message-bar-sa">
+                            <div class="pinned-message-content">
+                                <strong>📌 PINNED:</strong> <span id="pinned-content-sa">Loading...</span>
+                            </div>
+                            <button class="unpin-btn hidden" id="unpin-btn-sa" data-action="unpin-message" data-chat="sa">&times;</button>
+                        </div>
+                        
+                        <div class="chat-window" id="chat-window-sa">
+                            <div class="chat-messages" id="chat-messages-sa">
+                                </div>
+                        </div>
+                        
+                        <div class="chat-controls-container hidden" id="chat-controls-sa">
+                            </div>
+                        
+                        <form id="chat-form-sa" class="chat-input-form">
+                            <label for="file-upload-sa" class="btn attach-btn">
+                                📎 <input type="file" id="file-upload-sa" accept="image/*,video/*">
+                            </label>
+                            <input type="text" id="chat-input-sa" class="form-control" placeholder="Type a message...">
+                            <button type="submit" class="btn btn-primary">Send</button>
+                        </form>
+                        <div class="loading-spinner" id="chat-spinner-sa"></div>
+                        <div class="error-message" id="sa-post-error"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="page" id="page-rules">
+                <h2>Clan Rules & Laws</h2>
+                <div id="rules-list">
+                    <p>Loading rules...</p>
+                </div>
+            </div>
+
+            <div class="page" id="page-notice-board">
+                <h2>Notice Board</h2>
+                
+                <div class="card hidden" id="new-notice-form-container">
+                    <h3>Post New Notice</h3>
+                    <form id="new-notice-form">
                         <div class="form-group">
-                            <label for="advisory-subject">Subject / Category</label>
-                            <input type="text" id="advisory-subject" class="form-control" placeholder="e.g. War Strategy, New Rule Idea, Member Conduct" required>
+                            <label for="notice-title">Title</label>
+                            <input type="text" id="notice-title" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="notice-content">Content</label>
+                            <textarea id="notice-content" class="form-control" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Post Notice</button>
+                    </form>
+                </div>
+                
+                <div id="notice-list">
+                    <p>Loading notices...</p>
+                </div>
+            </div>
+
+            <div class="page" id="page-rankings-pdf">
+                <h2>PDF Rankings</h2>
+                <div class="ranking-list-pdf" id="pdf-rankings-list">
+                    <p>Loading PDF rankings...</p>
+                </div>
+            </div>
+
+            <div class="page" id="page-rankings-image">
+                <h2>Image Rankings</h2>
+                <div class="ranking-grid-image" id="image-rankings-list">
+                    <p>Loading image rankings...</p>
+                </div>
+            </div>
+
+            <div class="page" id="page-drafts-list">
+                <h2>Proposals & Drafts</h2>
+                <div class="draft-list" id="drafts-list-container">
+                    <p>Loading drafts...</p>
+                </div>
+            </div>
+
+            <div class="page" id="page-draft-detail">
+                <button class="btn btn-link" id="back-to-drafts-list">&larr; Back to Drafts List</button>
+                <div class="card">
+                    <h2 id="draft-detail-title">Loading Draft...</h2>
+                    <span class="draft-status" id="draft-detail-status"></span>
+                    
+                    <div id="draft-detail-content">
+                        <pre id="draft-detail-desc"></pre> <div id="draft-advice-section" class="hidden">
+                            <h3>Advice Phase</h3>
+                            <div class="countdown-timer" id="draft-advice-timer"></div>
+                            <form id="draft-advice-form" class="hidden">
+                                <div class="form-group">
+                                    <label for="draft-advice-input">Submit Your Advice</label>
+                                    <textarea id="draft-advice-input" class="form-control" rows="3"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Submit Advice</button>
+                            </form>
+                            <div class="login-prompt-overlay" id="draft-advice-login-prompt">
+                                <p>Please <button class="btn-link" data-page="login">Login</button> or <button class="btn-link" data-page="register">Register</button> to submit advice.</p>
+                            </div>
+                            <h4>Existing Advice:</h4>
+                            <ul id="draft-advice-list"></ul>
+                        </div>
+                        
+                        <div id="draft-voting-section" class="hidden">
+                            <h3>Voting Phase</h3>
+                            <div class="countdown-timer" id="draft-voting-timer"></div>
+                            <div id="draft-vote-buttons" class="vote-buttons hidden">
+                                <button class="btn btn-success" data-vote="yes">✅ Yes</button>
+                                <button class="btn btn-danger" data-vote="no">❌ No</button>
+                                <button class="btn btn-warning" data-vote="absent">⚪ Absent</button>
+                            </div>
+                            <p id="draft-voted-message" class="hidden"></p>
+                            <div class="login-prompt-overlay" id="draft-voting-login-prompt">
+                                <p>Please <button class="btn-link" data-page="login">Login</button> or <button class="btn-link" data-page="register">Register</button> to vote.</p>
+                            </div>
+                        </div>
+                        
+                        <div id="draft-result-section" class="hidden">
+                            <h3>Result</h3>
+                            <pre id="draft-result-summary"></pre>
+                        </div>
+                        
+                        <div id="draft-leader-activation-section" class="hidden">
+                            <h3>Leader Action Required</h3>
+                            <p>This law has passed and is pending activation.</p>
+                            <button class="btn btn-success" id="draft-activate-law-btn">ACTIVATE LAW</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page" id="page-leader-dm">
+                <h2>Leader Private Message</h2>
+                <div class="card">
+                    <form id="leader-dm-form" class="hidden">
+                        <h3>Send a Private Message to the Leader</h3>
+                        <p>This message will be sent to the Leader's private "Quarry Inbox" and is not visible to other players.</p>
+                        <div class="form-group">
+                            <label for="dm-subject">Subject</label>
+                            <input type="text" id="dm-subject" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="dm-message">Message</label>
+                            <textarea id="dm-message" class="form-control" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                    <div class="login-prompt-overlay" id="dm-login-prompt">
+                        <p>Please <button class="btn-link" data-page="login">Login</button> or <button class="btn-link" data-page="register">Register</button> to send a private message.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page" id="page-advisory">
+                <h2>Give Advice</h2>
+                <div class="card">
+                    <form id="advisory-form" class="hidden">
+                        <h3>Submit to Advisory Inbox</h3>
+                        <p>This advice will be sent to the Leader's private "Advisory Inbox" for consideration.</p>
+                        <div class="form-group">
+                            <label for="advisory-subject">Subject</label>
+                            <input type="text" id="advisory-subject" class="form-control" required>
                         </div>
                         <div class="form-group">
                             <label for="advisory-message">Your Advice</label>
-                            <textarea id="advisory-message" class="form-control" required></textarea>
+                            <textarea id="advisory-message" class="form-control" rows="5" required></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary">Submit Advice</button>
                     </form>
-                    
-                    <div id="advisory-login-prompt" class="action-login-prompt static" style="display: none;">
-                        <h3>Login Required</h3>
-                        <p>You must login or register to submit advice.</p>
-                        <button class="btn btn-primary" data-action="show-login">Login Now</button>
+                    <div class="login-prompt-overlay" id="advisory-login-prompt">
+                        <p>Please <button class="btn-link" data-page="login">Login</button> or <button class="btn-link" data-page="register">Register</button> to submit advice.</p>
                     </div>
                 </div>
             </div>
             
-            <div id="pdf-ranking-page" class="page">
-                <div class="card">
-                    <h2 class="card-title">🏆 PDF Ranking Board</h2>
-                    <div class="alert alert-info">Download the latest PDF rankings uploaded by the Leader.</div>
-                    <div id="pdf-ranking-list">
-                        </div>
+            <div class="page" id="page-player-dashboard">
+                <h2>My Dashboard</h2>
+                
+                <div class="widget" id="player-dash-guest">
+                    <h3>Guest</h3>
+                    <div class="login-prompt-overlay" style="margin-top: 0;">
+                         <p>Please <button class="btn-link" data-page="login">Login</button> or <button class="btn-link" data-page="register">Register</button> to view your dashboard.</p>
+                    </div>
+                </div>
+                
+                <div class="widget hidden" id="player-dash-member">
+                    <h3>Member Dashboard</h3>
+                    <p>Welcome, <span class="player-name"></span>!</p>
+                    <p><strong>Role:</strong> Member</p>
+                    <p><strong>Clan:</strong> <span class="player-clan"></span></p>
+                    <p>You have no special powers. Participate in chat and voting to rank up!</p>
+                </div>
+                
+                <div class="widget hidden" id="player-dash-elder">
+                    <h3>Elder Dashboard</h3>
+                    <p>Welcome, <span class="player-name"></span>!</p>
+                    <p><strong>Role:</strong> Elder</p>
+                    <p><strong>Clan:</strong> <span class="player-clan"></span></p>
+                    <h4>Elder Powers:</h4>
+                    <strong>View General Chat Activity (Last 10)</strong>
+                    <div class="chat-log" id="elder-chat-log-ga"></div>
+                </div>
+                
+                <div class="widget hidden" id="player-dash-coleader">
+                    <h3>Co-Leader Dashboard</h3>
+                    <p>Welcome, <span class="player-name"></span>!</p>
+                    <p><strong>Role:</strong> Co-Leader ⭐</p>
+                    <p><strong>Clan:</strong> <span class="player-clan"></span></p>
+                    <h4>Co-Leader Powers:</h4>
+                    <div class="form-group">
+                        <strong>Mute Player (General Chat)</strong>
+                        <form id="co-leader-mute-form">
+                            <label for="mute-player-id">Player ID to Mute</label>
+                            <input type="text" id="mute-player-id" class="form-control" placeholder="#PLAYERID">
+                            <label for="mute-duration">Duration</label>
+                            <select id="mute-duration" class="form-control">
+                                <option value="1">1 Hour</option>
+                                <option value="24">24 Hours</option>
+                            </select>
+                            <button type="submit" class="btn btn-warning" style="margin-top: 10px;">Apply Mute</button>
+                        </form>
+                    </div>
+                    <strong>View General Chat Activity (Last 10)</strong>
+                    <div class="chat-log" id="coleader-chat-log-ga"></div>
+                    <strong>View Special Assembly Activity (Last 10)</strong>
+                    <div class="chat-log" id="coleader-chat-log-sa"></div>
                 </div>
             </div>
             
-            <div id="image-ranking-page" class="page">
-                <div class="card">
-                    <h2 class="card-title">🖼️ Image Ranking Board</h2>
-                    <div class="alert alert-info">View the latest ranking images uploaded by the Leader.</div>
-                    <div class="image-grid" id="image-ranking-list">
+            <div class="page" id="page-leader-dashboard">
+                <div id="leader-dash-main" class="leader-section active">
+                    <h2>Leader Dashboard</h2>
+                    <div class="dashboard-grid">
+                        <div class="dashboard-grid-btn" data-section="new-registrations">New Registrations</div>
+                        <div class="dashboard-grid-btn" data-section="player-management">Player Management</div>
+                        <div class="dashboard-grid-btn" data-section="pdf-management">PDF Rankings</div>
+                        <div class="dashboard-grid-btn" data-section="image-management">Image Rankings</div>
+                        <div class="dashboard-grid-btn" data-section="draft-management">Drafts & Rules</div>
+                        <div class="dashboard-grid-btn" data-section="cabinet-management">Cabinet</div>
+                        <div class="dashboard-grid-btn" data-section="inbox-quarry">Quarry Inbox</div>
+                        <div class="dashboard-grid-btn" data-section="inbox-advisory">Advisory Inbox</div>
+                        <div class="dashboard-grid-btn" id="forcefully-btn" style="background-color: #dc3545; color: white; grid-column: 1 / -1;">
+                            Forcefully Button
                         </div>
+                    </div>
                 </div>
-            </div>
-            <div id="leader-dashboard-page" class="page">
-                <h2 class="card-title">🛡️ Leader Dashboard</h2>
-                <div class="dashboard-grid">
-                    <a href="#" class="dashboard-button" data-action="show-players-actions">👥 Players & Actions</a>
-                    <a href="#" class="dashboard-button" data-action="show-quarry">📥 Quarry (Inbox)</a>
-                    <a href="#" class="dashboard-button" data-action="show-advisory-inbox">🧠 Advisory Inbox</a>
-                    <a href="#" class="dashboard-button" data-action="show-create-draft">✍️ Create Draft Rule</a>
-                    <a href="#" class="dashboard-button" data-action="show-cabinet-management">🎖️ Cabinet Management</a>
-                    <a href="#" class="dashboard-button ranking-btn" data-action="show-pdf-management">🏆 PDF Ranking Management</a>
-                    <a href="#" class="dashboard-button image-btn" data-action="show-image-management">🖼️ Image Ranking Management</a>
-                    
-                    <a href="#" class="dashboard-button" data-action="export-player-data">📊 Export Player Data (JSON)</a>
-                </div>
-                
-                <div id="new-registrations-card" class="card" style="margin-top: 30px;">
-                    <h3 class="card-title">🔔 New Registrations</h3>
+
+                <div id="leader-section-new-registrations" class="leader-section card">
+                    <button class="btn btn-link leader-back-btn">&larr; Back to Dashboard</button>
+                    <h3>New Registrations</h3>
                     <div id="new-registrations-list"></div>
                 </div>
-            </div>
-            <div id="players-actions-page" class="page">
-                <div class="card">
-                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
-                    <h2 class="card-title">👥 Players & Actions</h2>
-                    <div class="player-table-container">
-                        <table class="player-table">
+                
+                <div id="leader-section-player-management" class="leader-section card">
+                    <button class="btn btn-link leader-back-btn">&larr; Back to Dashboard</button>
+                    <h3>Player Management</h3>
+                    <div style="overflow-x: auto;">
+                        <table class="mgmt-table" id="player-management-table">
                             <thead>
-                                <tr>
-                                    <th>Name (ID)</th>
-                                    <th>Password</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th>Joined</th>
-                                    <th>Actions</th>
-                                </tr>
+                                <tr><th>Player</th><th>Role</th><th>Status</th><th>Actions</th></tr>
                             </thead>
-                            <tbody id="players-actions-table-body">
-                                </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
-            </div>
 
-            <div id="player-details-page" class="page">
-                 <div class="card">
-                    <button class="btn btn-secondary" data-action="show-players-actions" style="margin-bottom: 20px;">&larr; Back to Players</button>
-                    <h2 class="card-title">📊 Player Details: <span id="player-detail-name"></span></h2>
-                    
-                    <div id="player-detail-info"></div>
-
-                    <h3>Activity Log</h3>
-                    <div id="player-detail-activity" style="background: #f9f9f9; border: 1px solid #eee; padding: 15px; border-radius: var(--radius); max-height: 500px; overflow-y: auto;">
-                        </div>
-                </div>
-            </div>
-
-            <div id="quarry-page" class="page">
-                <div class="card">
-                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
-                    <h2 class="card-title">📥 Quarry (Leader's Inbox)</h2>
-                    <div class="item-list" id="quarry-list">
-                        </div>
-                </div>
-            </div>
-
-            <div id="advisory-inbox-page" class="page">
-                <div class="card">
-                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
-                    <h2 class="card-title">🧠 Advisory Committee Inbox</h2>
-                    <div class="item-list" id="advisory-inbox-list">
-                        </div>
-                </div>
-            </div>
-            
-            <div id="create-draft-page" class="page">
-                <div class="card form-container">
-                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
-                    <h2 class="card-title">✍️ Create New Draft Rule</h2>
-                    <form id="create-draft-form">
+                <div id="leader-section-pdf-management" class="leader-section card">
+                    <button class="btn btn-link leader-back-btn">&larr; Back to Dashboard</button>
+                    <h3>Manage PDF Rankings</h3>
+                    <form id="pdf-upload-form" class="card" style="background: #f9f9f9;">
+                        <h4>Upload New PDF</h4>
                         <div class="form-group">
-                            <label for="draft-title">Draft Title</label>
-                            <input type="text" id="draft-title" class="form-control" required>
+                            <label for="pdf-upload-title">Title</label>
+                            <input type="text" id="pdf-upload-title" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label for="draft-description">Full Description</label>
-                            <textarea id="draft-description" class="form-control" required></textarea>
+                            <label for="pdf-upload-desc">Description</label>
+                            <input type="text" id="pdf-upload-desc" class="form-control" required>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">Publish Draft (Starts 5h Advice Phase)</button>
+                        <div class="form-group">
+                            <label for="pdf-upload-file">PDF File</label>
+                            <input type="file" id="pdf-upload-file" class="form-control" accept=".pdf" required>
+                        </div>
+                        <div class="upload-progress-container" id="pdf-upload-progress"></div> <button type="submit" class="btn btn-primary">Upload PDF</button>
                     </form>
+                    <h4>Existing PDFs</h4>
+                    <div id="pdf-management-list"></div>
                 </div>
-            </div>
 
-            <div id="cabinet-management-page" class="page">
-                <div class="card">
-                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
-                    <h2 class="card-title">🎖️ Cabinet Management (Max 5)</h2>
-                    <div class="alert alert-info">Cabinet Players can post on the Notice Board. Select Co-Leaders or Elders to be in the cabinet.</div>
-                    <form id="cabinet-management-form">
-                        <div class="form-group" id="cabinet-player-options">
-                            </div>
+                <div id="leader-section-image-management" class="leader-section card">
+                    <button class="btn btn-link leader-back-btn">&larr; Back to Dashboard</button>
+                    <h3>Manage Image Rankings</h3>
+                    <form id="image-upload-form" class="card" style="background: #f9f9f9;">
+                        <h4>Upload New Image</h4>
+                        <div class="form-group">
+                            <label for="image-upload-title">Title</label>
+                            <input type="text" id="image-upload-title" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="image-upload-file">Image File (will be compressed)</label>
+                            <input type="file" id="image-upload-file" class="form-control" accept="image/*" required>
+                        </div>
+                        <div class="upload-progress-container" id="image-upload-progress"></div> <button type="submit" class="btn btn-primary">Upload Image</button>
+                    </form>
+                    <h4>Existing Images</h4>
+                    <div id="image-management-list" class="ranking-grid-image"></div>
+                </div>
+                
+                <div id="leader-section-draft-management" class="leader-section card">
+                    <button class="btn btn-link leader-back-btn">&larr; Back to Dashboard</button>
+                    <h3>Manage Drafts & Rules</h3>
+                    <form id="draft-create-form" class="card" style="background: #f9f9f9;">
+                        <h4>Create New Draft</h4>
+                        <div class="form-group">
+                            <label for="draft-create-title">Title</label>
+                            <input type="text" id="draft-create-title" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="draft-create-desc">Description / Content (supports newlines)</label>
+                            <textarea id="draft-create-desc" class="form-control" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create & Publish Draft</button>
+                    </form>
+                    <h4>Existing Drafts</h4>
+                    <p>Go to the <a href="#" class="nav-link" data-page="drafts-list">Public Drafts List</a> to manage or activate them.</p>
+                </div>
+                
+                <div id="leader-section-cabinet-management" class="leader-section card">
+                    <button class="btn btn-link leader-back-btn">&larr; Back to Dashboard</button>
+                    <h3>Manage Cabinet</h3>
+                    <p>Select up to 5 Elders or Co-Leaders for the Cabinet.</p>
+                    <form id="cabinet-form">
+                        <div id="cabinet-checkbox-list"></div>
                         <button type="submit" class="btn btn-primary">Save Cabinet</button>
                     </form>
                 </div>
-            </div>
-            
-            <div id="pdf-management-page" class="page">
-                <div class="card">
-                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
-                    <h2 class="card-title">🏆 PDF Ranking Management</h2>
-                    
-                    <form id="upload-pdf-form" class="card" style="background-color: var(--color-light-gray);">
-                        <h3 style="margin-bottom: 15px;">Upload New PDF</h3>
-                        <div class="form-group">
-                            <label for="pdf-title">Title</label>
-                            <input type="text" id="pdf-title" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="pdf-description">Description (Optional)</label>
-                            <input type="text" id="pdf-description" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label for="pdf-file-input">PDF File</label>
-                            <input type="file" id="pdf-file-input" class="form-control" accept=".pdf" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Upload PDF</button>
-                    </form>
-                    
-                    <h3 style="margin-top: 20px;">Uploaded PDFs</h3>
-                    <div id="pdf-management-list">
-                        </div>
+                
+                <div id="leader-section-inbox-quarry" class="leader-section card">
+                    <button class="btn btn-link leader-back-btn">&larr; Back to Dashboard</button>
+                    <h3>Quarry Inbox (Private DMs)</h3>
+                    <div id="inbox-quarry-list"><p>Loading messages...</p></div>
                 </div>
-            </div>
-            
-            <div id="image-management-page" class="page">
-                <div class="card">
-                    <button class="btn btn-secondary" data-action="show-leader-dashboard" style="margin-bottom: 20px;">&larr; Back to Dashboard</button>
-                    <h2 class="card-title">🖼️ Image Ranking Management</h2>
-                    
-                    <form id="upload-image-form" class="card" style="background-color: var(--color-light-gray);">
-                        <h3 style="margin-bottom: 15px;">Upload New Image</h3>
-                        <div class="form-group">
-                            <label for="image-title">Title</label>
-                            <input type="text" id="image-title" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="image-file-input">Image File</label>
-                            <input type="file" id="image-file-input" class="form-control" accept="image/png, image/jpeg, image/gif" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Upload Image</button>
-                    </form>
-                    
-                    <h3 style="margin-top: 20px;">Uploaded Images</h3>
-                    <div id="image-management-list">
-                        </div>
+                
+                <div id="leader-section-inbox-advisory" class="leader-section card">
+                    <button class="btn btn-link leader-back-btn">&larr; Back to Dashboard</button>
+                    <h3>Advisory Inbox</h3>
+                    <div id="inbox-advisory-list"><p>Loading messages...</p></div>
                 </div>
             </div>
 
+            <div class="page" id="page-force-mode-dashboard">
+                <div class="card" style="border: 3px solid var(--color-danger);">
+                    <h2 style="color: var(--color-danger); text-align: center;">🚨 FORCE MODE ACTIVE 🚨</h2>
+                    <p style="text-align: center; color: var(--color-danger);">All actions are logged. Misuse will result in consequences.</p>
+                    <button class="btn btn-link" id="force-mode-exit-btn">&larr; Exit Force Mode & Return to Main Dashboard</button>
+                </div>
 
-        </main>
+                <div class="card">
+                    <h3>Full Player Management (Force Mode)</h3>
+                    <p>You can now edit all player data. Be careful.</p>
+                    <div style="overflow-x: auto;">
+                        <table class="mgmt-table" id="force-player-management-table">
+                            <thead>
+                                <tr><th>Player</th><th>Role</th><th>Status</th><th>Chat</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>Global Chat Moderation (Force Mode)</h3>
+                    <p>Delete any message from any chat.</p>
+                    <h4>General Chat Log</h4>
+                    <div class="chat-log" id="force-chat-log-ga"></div>
+                    <h4 style="margin-top: 1rem;">Special Assembly Log</h4>
+                    <div class="chat-log" id="force-chat-log-sa"></div>
+                </div>
+                
+                <div class="card">
+                    <h3>View All Private Inboxes (Force Mode)</h3>
+                    <h4>All Quarry (DM) Messages</h4>
+                    <div class="chat-log" id="force-inbox-quarry"></div>
+                    <h4 style="margin-top: 1rem;">All Advisory Messages</h4>
+                    <div class="chat-log" id="force-inbox-advisory"></div>
+                </div>
+            </div>
+
+        </main> </div> <div class="modal-overlay hidden" id="modal-force-verify-1">
+        <div class="modal-content">
+            <h3>Step 1/6: Re-enter Credentials</h3>
+            <p>To proceed, please re-authenticate.</p>
+            <div class="error-message" id="force-modal-error-1"></div>
+            <form id="force-form-1">
+                <div class="form-group">
+                    <label for="force-id-1">Player ID</label>
+                    <input type="text" id="force-id-1" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="force-pass-1">Password</label>
+                    <input type="password" id="force-pass-1" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Next</button>
+                <button type="button" class="btn btn-link modal-close-btn">Cancel</button>
+            </form>
+        </div>
     </div>
-
+    
+    <div class="modal-overlay hidden" id="modal-force-verify-2">
+        <div class="modal-content">
+            <h3>Step 2/6: Confirm Credentials</h3>
+            <p>Please confirm your credentials one more time.</p>
+            <div class="error-message" id="force-modal-error-2"></div>
+            <form id="force-form-2">
+                <div class="form-group">
+                    <label for="force-id-2">Player ID</label>
+                    <input type="text" id="force-id-2" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="force-pass-2">Password</label>
+                    <input type="password" id="force-pass-2" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Next</button>
+                <button type="button" class="btn btn-link modal-close-btn">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal-overlay hidden" id="modal-force-captcha">
+        <div class="modal-content">
+            <h3>Step 3/6: Enter CAPTCHA</h3>
+            <p>Enter the text below (case-sensitive).</p>
+            <div class="error-message" id="force-modal-error-3"></div>
+            <div id="modal-captcha-image"></div>
+            <form id="force-form-3">
+                <div class="form-group">
+                    <input type="text" id="force-captcha-input" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Next</button>
+                <button type="button" class="btn btn-link modal-close-btn">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal-overlay hidden" id="modal-force-reason">
+        <div class="modal-content">
+            <h3>Step 4/6: Provide Justification</h3>
+            <p>Your reason for entering Force Mode will be logged. (Min 50 words)</p>
+            <div class="error-message" id="force-modal-error-4"></div>
+            <form id="force-form-4">
+                <div class="form-group">
+                    <textarea id="force-reason" class="form-control" rows="5" required></textarea>
+                    <div id="word-count">Words: 0</div>
+                </div>
+                <button type="submit" class="btn btn-primary">Log Reason & Proceed</button>
+                <button type="button" class="btn btn-link modal-close-btn">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal-overlay hidden" id="modal-force-warning">
+        <div class="modal-content">
+            <h3>Step 5/6: FINAL WARNING</h3>
+            <p>You are about to enter 'Force Mode'. This is for emergencies only and all actions are logged to the audit trail.</p>
+            <button class="btn btn-danger" id="force-agree-btn" style="width: 100%;">I Understand and Agree</button>
+            <button type="button" class="btn btn-link modal-close-btn" style="width: 100%; margin-top: 10px;">Cancel</button>
+        </div>
+    </div>
+    
+    <div class="modal-overlay hidden" id="modal-force-unlocked">
+        <div class="modal-content">
+            <h3>Step 6/6: Force Mode Unlocked</h3>
+            <p>You now have full administrative power. Use it wisely. Please do not misuse this power.</p>
+            <button class="btn btn-primary" id="open-force-dashboard-btn" style="width: 100%;">Open Force Mode Dashboard</button>
+        </div>
+    </div>
+    
+    <div class="modal-overlay hidden" id="modal-force-edit-player">
+        <div class="modal-content">
+            <h3 id="force-edit-title">Editing Player:</h3>
+            <form id="force-edit-form">
+                <input type="hidden" id="force-edit-id">
+                <div class="form-group">
+                    <label for="force-edit-name">Player Name</label>
+                    <input type="text" id="force-edit-name" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="force-edit-password">New Password (optional)</label>
+                    <input type="text" id="force-edit-password" class="form-control" placeholder="Leave blank to keep unchanged">
+                </div>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn btn-link modal-close-btn">Cancel</button>
+            </form>
+        </div>
+    </div>
+    
+    <audio id="chat-notification-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-message-pop-alert-2354.mp3" preload="auto"></audio>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
 
-            // --- 1. FIREBASE SETUP ---
-            // 🔴 यह आपका FIREBASE CONFIG कोड है
-            const firebaseConfig = {
-              apiKey: "AIzaSyDkKkOLlq-Ipr8mgzd5hfE6X-qkQgAdYCE",
-              authDomain: "clanportal.firebaseapp.com",
-              projectId: "clanportal",
-              storageBucket: "clanportal.firebasestorage.app",
-              messagingSenderId: "881645657294",
-              appId: "1:881645657294:web:e0f46054f8a113ce37c49f",
-              measurementId: "G-Z84SMVXCTX"
-              // REMOVED: Realtime Database URL
-            };
+        // =================================================================
+        // 1. FIREBASE INITIALIZATION (Mandatory Config)
+        // =================================================================
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDkKkOLlq-Ipr8mgzd5hfE6X-qkQgAdYCE",
+            authDomain: "clanportal.firebaseapp.com",
+            projectId: "clanportal",
+            storageBucket: "clanportal.firebasestorage.app",
+            messagingSenderId: "881645657294",
+            appId: "1:881645657294:web:e0f46054f8a113ce37c49f",
+            measurementId: "G-Z84SMVXCTX"
+        };
 
-            // Initialize Firebase
-            firebase.initializeApp(firebaseConfig);
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+        const FieldValue = firebase.firestore.FieldValue;
+
+        // =================================================================
+        // 2. GLOBAL APP STATE
+        // =================================================================
+        
+        const appState = {
+            currentUser: null,
+            currentPage: 'home',
+            allUsersCache: [], 
+            currentDraft: null,
+            fileToUploadGA: null,
+            fileToUploadSA: null,
+            listeners: {},
+            currentCaptcha: '', // For force mode
+            isInitialChatLoad: true // To prevent notification sound on load
+        };
+
+        // =================================================================
+        // 3. DOM ELEMENT REFERENCES
+        // =================================================================
+        
+        // App Layout
+        const mainContent = document.getElementById('main-content');
+        const appSidebar = document.getElementById('app-sidebar');
+        const hamburgerBtn = document.getElementById('hamburger-menu-btn');
+        const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+
+        // Auth Forms
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const loginSpinner = document.getElementById('login-spinner');
+        const registerForm = document.getElementById('register-form');
+        const registerError = document.getElementById('register-error');
+        const registerSpinner = document.getElementById('register-spinner');
+        
+        // Navigation Buttons
+        const navLinks = document.querySelectorAll('.nav-link');
+        const logoutBtn = document.getElementById('logout-btn');
+        const sidebarLoginBtn = document.getElementById('sidebar-login-btn');
+        const sidebarRegisterBtn = document.getElementById('sidebar-register-btn');
+        const gotoRegisterBtn = document.getElementById('goto-register-btn');
+        const gotoLoginBtn = document.getElementById('goto-login-btn');
+        
+        // Audio
+        const notificationSound = document.getElementById('chat-notification-sound');
+
+        // =================================================================
+        // 4. CORE APP NAVIGATION
+        // =================================================================
+
+        function showPage(pageId) {
+            console.log(`Navigating to: ${pageId}`);
+            detachAllListeners();
+
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            const targetPage = document.getElementById(`page-${pageId}`);
             
-            const db = firebase.firestore(); 
-            const storage = firebase.storage();
-            // REMOVED: Realtime Database reference
-
-            // --- 2. State and Database References ---
-
-            let appState = {
-                currentUser: null,
-                currentPage: 'home-page', // MODIFIED: Default page is home
-                currentDraftId: null,
-                viewingPlayerId: null,
-                allUsersCache: [], 
-                listeners: {}, 
-                // REMOVED: Cache for online statuses (userStatuses)
-                // NEW: Prevent sound on initial load
-                isFirstLoad: { ga: true, sa: true },
-                fileToUpload: {
-                    ga: null,
-                    sa: null
-                }
-            };
-
-            // Database collections के रेफरेन्स
-            const usersCollection = db.collection('users');
-            const metaCollection = db.collection('meta'); 
-            const messagesCollection = db.collection('messages');
-            const draftsCollection = db.collection('drafts');
-            const rulesCollection = db.collection('rules');
-            const noticesCollection = db.collection('notices');
-            const adviceCollection = db.collection('advice');
-            const dmsCollection = db.collection('dms');
-            // --- NEW: PDF and Image Ranking Collections ---
-            const pdfRankingsCollection = db.collection('pdfRankings');
-            const imageRankingsCollection = db.collection('imageRankings');
-            
-            // REMOVED: RTDB reference for presence
-
-
-            // --- 3. Initialization ---
-
-            async function initApp() {
-                try {
-                    const metaDoc = await metaCollection.doc('main').get();
-                    if (!metaDoc.exists) {
-                        await metaCollection.doc('main').set({
-                            cabinet: [],
-                            newRegistrations: [],
-                            pinnedMessageGA: null, 
-                            pinnedMessageSA: null
-                        }, { merge: true });
-                        console.log("Initialized 'meta/main' document.");
-                    }
-                } catch (error) {
-                    console.error("Error initializing meta doc:", error);
-                }
-
-                try {
-                    const leaderDoc = await usersCollection.doc('Aryanrajput').get();
-                    if (!leaderDoc.exists) {
-                        await usersCollection.doc('Aryanrajput').set({
-                            id: 'Aryanrajput',
-                            name: '⚔️Aryan⚔️',
-                            clanName: '👑 king 👑',
-                            clanId: '#2G0YJ080V',
-                            dob: '2000-01-01',
-                            country: 'India',
-                            state: 'Delhi',
-                            languages: 'English',
-                            password: '91621272', 
-                            role: 'Leader',
-                            status: 'active',
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                        console.log("Final Leader account created. ID: Aryanrajput, Pass: 91621272");
-                    }
-                } catch (error) {
-                    console.error("Error checking/creating leader:", error);
-                }
-
-                // REMOVED: listenToAllStatuses();
-                
-                // MODIFIED: Check session storage
-                const sessionUser = sessionStorage.getItem('clanPortalUser');
-                await cacheAllUsers(); // Cache users early
-                
-                if (sessionUser) {
-                    appState.currentUser = JSON.parse(sessionUser);
-                    // REMOVED: setupPresence(appState.currentUser.id);
-                } else {
-                    appState.currentUser = null;
-                }
-                
-                updateHeader();
-                showPage('home-page'); // MODIFIED: Always show home page first
-                attachEventListeners();
-            }
-
-            // --- Helper: Cache All Users ---
-            async function cacheAllUsers() {
-                try {
-                    const snapshot = await usersCollection.get();
-                    appState.allUsersCache = snapshot.docs.map(doc => doc.data());
-                    console.log('All users cached:', appState.allUsersCache.length);
-                } catch (error) {
-                    console.error("Error caching users:", error);
-                }
+            if (targetPage) {
+                targetPage.classList.add('active');
+                appState.currentPage = pageId;
+            } else {
+                document.getElementById('page-home').classList.add('active'); // Fallback
             }
             
-            // --- NEW: Chat Notification Sound ---
-            function playChatSound() {
-                const sound = document.getElementById('chat-notification-sound');
-                if (sound) {
-                    sound.play().catch(error => console.warn("Sound play interrupted:", error));
-                }
-            }
+            navLinks.forEach(link => {
+                link.classList.remove('active-nav');
+                if(link.dataset.page === pageId) link.classList.add('active-nav');
+            });
+
+            if (window.innerWidth <= 768) appSidebar.classList.remove('active');
             
-            // --- REMOVED: Presence System (setupPresence, goOffline, listenToAllStatuses) ---
+            loadPageData(pageId);
+        }
 
-
-            // --- 4. Page Navigation & Real-time Listeners ---
-
-            function detachAllListeners() {
-                console.log("Detaching all listeners...");
-                for (let key in appState.listeners) {
-                    if (appState.listeners[key]) {
-                        appState.listeners[key](); // Unsubscribe
-                        appState.listeners[key] = null;
-                    }
-                }
-            }
-
-            function showPage(pageId, context = null) {
-                detachAllListeners();
-                
-                appState.fileToUpload = { ga: null, sa: null };
-                if(document.getElementById('ga-file-input')) {
-                    document.getElementById('ga-file-input').value = null;
-                }
-                if(document.getElementById('sa-file-input')) {
-                    document.getElementById('sa-file-input').value = null;
-                }
-
-
-                document.querySelectorAll('.page').forEach(page => {
-                    page.classList.remove('active');
-                });
-
-                const targetPage = document.getElementById(pageId);
-                if (targetPage) {
-                    targetPage.classList.add('active');
-                    appState.currentPage = pageId;
-
-                    // MODIFIED: Check login status for all gated pages
-                    checkLoginForPage(pageId); 
-
-                    switch (pageId) {
-                        case 'home-page':
-                            renderHomePageButtons();
-                            renderCabinetList();
-                            break;
-                        case 'general-assembly-page':
-                            appState.isFirstLoad.ga = true; 
-                            renderGeneralAssembly();
-                            renderChatControls('ga');
-                            break;
-                        case 'special-assembly-page':
-                            appState.isFirstLoad.sa = true; 
-                            renderSpecialAssembly();
-                            renderChatControls('sa');
-                            break;
-                        case 'notice-board-page':
-                            renderNoticeBoard();
-                            break;
-                        case 'drafts-voting-page':
-                            renderDraftsVotingPage();
-                            break;
-                        case 'draft-detail-page':
-                            appState.currentDraftId = context.draftId;
-                            renderDraftDetailPage(context.draftId);
-                            break;
-                        case 'rules-page':
-                            renderRules();
-                            break;
-                        case 'leader-chat-page': 
-                        case 'advisory-page': 
-                            // Login check is already handled by checkLoginForPage
-                            break;
-                        // --- NEW: PDF/Image Ranking Pages ---
-                        case 'pdf-ranking-page':
-                            renderPdfRankingList();
-                            break;
-                        case 'image-ranking-page':
-                            renderImageRankingList();
-                            break;
-                        // --- Leader Pages ---
-                        case 'leader-dashboard-page':
-                            renderLeaderDashboard();
-                            break;
-                        case 'players-actions-page':
-                            renderPlayersActions();
-                            break;
-                        case 'player-details-page':
-                            appState.viewingPlayerId = context.userId;
-                            renderPlayerDetails(context.userId);
-                            break;
-                        case 'quarry-page':
-                            renderQuarry();
-                            break;
-                        case 'advisory-inbox-page':
-                            renderAdvisoryInbox();
-                            break;
-                        case 'cabinet-management-page':
-                            renderCabinetManagement();
-                            break;
-                        // --- NEW: PDF/Image Management ---
-                        case 'pdf-management-page':
-                            renderPdfManagementList();
-                            break;
-                        case 'image-management-page':
-                            renderImageManagementList();
-                            break;
-                    }
-                    
-                    window.scrollTo(0, 0);
-
-                } else {
-                    console.error(`Page not found: ${pageId}`);
-                    showPage('home-page'); // Default to home page
-                }
-            }
+        function loadPageData(pageId) {
+            // Reset chat load flag
+            appState.isInitialChatLoad = true;
             
-            // --- MODIFIED: Check Login for Pages ---
-            // This function now hides forms and shows login prompts if the user is not logged in.
-            function checkLoginForPage(pageId) {
-                const isLoggedIn = !!appState.currentUser;
-
-                const pagePrompts = {
-                    'general-assembly-page': { form: 'ga-chat-form', prompt: 'ga-login-prompt' },
-                    'special-assembly-page': { form: 'sa-chat-form', prompt: 'sa-login-prompt' },
-                    'leader-chat-page': { form: 'leader-chat-form', prompt: 'leader-chat-login-prompt' },
-                    'advisory-page': { form: 'advisory-form', prompt: 'advisory-login-prompt' },
-                    'draft-detail-page-vote': { form: 'draft-voting-section .vote-options', prompt: 'draft-vote-login-prompt' },
-                    'draft-detail-page-advice': { form: 'draft-advice-form', prompt: 'draft-advice-login-prompt' }
-                };
-
-                let configKey = pageId;
+            switch (pageId) {
+                // Public Pages
+                case 'home': loadHomePage(); break;
+                case 'rules': loadRules(); break;
+                case 'notice-board': loadNoticeBoard(); break;
+                case 'rankings-pdf': loadPdfRankings(); break;
+                case 'rankings-image': loadImageRankings(); break;
+                case 'drafts-list': loadDraftsList(); break;
+                case 'chat-general': loadChat('general'); break;
                 
-                // Special handling for draft detail page
-                if (pageId === 'draft-detail-page') {
-                    // Check for vote section
-                    let voteConfig = pagePrompts['draft-detail-page-vote'];
-                    let voteForm = document.querySelector(voteConfig.form);
-                    let votePrompt = document.getElementById(voteConfig.prompt);
-                    if(voteForm && votePrompt) {
-                        voteForm.style.display = isLoggedIn ? 'flex' : 'none';
-                        votePrompt.style.display = isLoggedIn ? 'none' : 'block';
+                // Gated Pages (Require Login)
+                case 'player-dashboard': loadPlayerDashboard(); break;
+                case 'leader-dm': loadDmPage(); break;
+                case 'advisory': loadAdvisoryPage(); break;
+                
+                case 'chat-special':
+                    if (appState.currentUser && appState.currentUser.role !== 'Member') {
+                        loadChat('special');
+                    } else {
+                        showPage('home');
+                        if (appState.currentUser) alert('Access denied. Special Assembly is for Elders+.');
                     }
-                    
-                    // Check for advice section
-                    let adviceConfig = pagePrompts['draft-detail-page-advice'];
-                    let adviceForm = document.getElementById(adviceConfig.form);
-                    let advicePrompt = document.getElementById(adviceConfig.prompt);
-                    if(adviceForm && advicePrompt) {
-                        adviceForm.style.display = isLoggedIn ? 'block' : 'none';
-advicePrompt.style.display = isLoggedIn ? 'none' : 'block';
-                    }
-                    return; // Exit after handling draft page
-                }
-
-                const config = pagePrompts[configKey];
-                if (config) {
-                    const form = document.getElementById(config.form);
-                    const prompt = document.getElementById(config.prompt);
-                    if (form) {
-                        form.style.display = isLoggedIn ? (configKey.includes('assembly') ? 'flex' : 'block') : 'none';
-                    }
-                    if (prompt) {
-                        prompt.style.display = isLoggedIn ? 'none' : (configKey.includes('assembly') ? 'flex' : 'block');
-                    }
-                }
-            }
-            // --- 5. Event Listeners ---
-
-            function attachEventListeners() {
-                document.body.addEventListener('click', (e) => {
-                    let target = e.target.closest('[data-action]');
-                    if (!target) return;
-
-                    const action = target.dataset.action;
-                    if (action) {
-                        
-                        if (action.startsWith('show-')) {
-                            e.preventDefault();
-                            const pageId = action.replace('show-', '') + '-page';
-                            showPage(pageId);
-                        }
-                        
-                        switch (action) {
-                            case 'logout':
-                                e.preventDefault();
-                                handleLogout();
-                                break;
-                            case 'show-draft-detail':
-                                e.preventDefault();
-                                showPage('draft-detail-page', { draftId: target.dataset.id });
-                                break;
-                            case 'draft-vote':
-                                e.preventDefault();
-                                handleDraftVote(appState.currentDraftId, target.dataset.vote);
-                                break;
-                            case 'activate-draft':
-                                e.preventDefault();
-                                handleActivateLaw(target.dataset.id); 
-                                break;
-                            case 'leader-delete-rule':
-                                e.preventDefault();
-                                handleRemoveRule(target.dataset.id);
-                                break;
-                            case 'show-player-details':
-                                e.preventDefault();
-                                showPage('player-details-page', { userId: target.dataset.id });
-                                break;
-                            case 'player-action':
-                                e.preventDefault();
-                                handlePlayerAction(target.dataset.id, target.dataset.task);
-                                break;
-                            case 'acknowledge-registration':
-                                e.preventDefault();
-                                acknowledgeRegistration(target.dataset.id);
-                                break;
-                            case 'mark-advice':
-                                e.preventDefault();
-                                markAdvice(target.dataset.id, target.dataset.status);
-                                break;
-                            case 'reply-dm':
-                                e.preventDefault();
-                                handleQuarryReply(target.dataset.id);
-                                break;
-                            case 'pin-message':
-                                e.preventDefault();
-                                handlePinMessage(target.dataset.id, target.dataset.room);
-                                break;
-                            case 'unpin-message':
-                                e.preventDefault();
-                                handlePinMessage(null, target.dataset.room); 
-                                break;
-                            case 'delete-message':
-                                e.preventDefault();
-                                handleDeleteMessage(target.dataset.id, target.dataset.room);
-                                break;
-                            case 'export-player-data':
-                                e.preventDefault();
-                                handleExportData();
-                                break;
-                            // --- NEW: PDF/Image Delete Actions ---
-                            case 'delete-pdf':
-                                e.preventDefault();
-                                handleDeletePdf(target.dataset.id, target.dataset.path);
-                                break;
-                            case 'delete-image':
-                                e.preventDefault();
-                                handleDeleteImage(target.dataset.id, target.dataset.path);
-                                break;
-                        }
-                    }
-                });
-
-                document.getElementById('login-form').addEventListener('submit', handleLogin);
-                document.getElementById('register-form').addEventListener('submit', handleRegister);
-                document.getElementById('ga-chat-form').addEventListener('submit', (e) => handleChatMessagePost(e, 'ga'));
-                document.getElementById('sa-chat-form').addEventListener('submit', (e) => handleChatMessagePost(e, 'sa'));
-                document.getElementById('new-notice-form').addEventListener('submit', handleNoticePost);
-                document.getElementById('draft-advice-form').addEventListener('submit', handleDraftAdvice);
-                document.getElementById('leader-chat-form').addEventListener('submit', handleLeaderChatSubmit);
-                document.getElementById('advisory-form').addEventListener('submit', handleAdvisorySubmit);
-                document.getElementById('create-draft-form').addEventListener('submit', handleCreateDraft);
-                document.getElementById('cabinet-management-form').addEventListener('submit', handleCabinetSave);
-                
-                // --- NEW: PDF/Image Upload Forms ---
-                document.getElementById('upload-pdf-form').addEventListener('submit', handlePdfUpload);
-                document.getElementById('upload-image-form').addEventListener('submit', handleImageUpload);
-
-
-                document.getElementById('reg-country').addEventListener('change', (e) => {
-                    const country = e.target.value;
-                    document.getElementById('india-states-group').style.display = (country === 'India') ? 'block' : 'none';
-                    document.getElementById('other-region-group').style.display = (country !== 'India' && country !== '') ? 'block' : 'none';
-                });
-                
-                document.getElementById('ga-file-input').addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        appState.fileToUpload.ga = file;
-                        document.getElementById('ga-chat-input').placeholder = `File attached: ${file.name} (Press Send)`;
-                    }
-                });
-                document.getElementById('sa-file-input').addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        appState.fileToUpload.sa = file;
-                        document.getElementById('sa-chat-input').placeholder = `File attached: ${file.name} (Press Send)`;
-                    }
-                });
-            }
-
-            // --- 6. UI Rendering Functions (BASIC) ---
-
-            function updateHeader() {
-                const loggedOutHeader = document.getElementById('header-logged-out');
-                const loggedInHeader = document.getElementById('header-logged-in');
-                
-                if (appState.currentUser) {
-                    loggedOutHeader.style.display = 'none';
-                    loggedInHeader.style.display = 'flex';
-                    
-                    const user = appState.currentUser;
-                    const avatar = user.name.charAt(0).toUpperCase();
-                    document.getElementById('user-avatar').textContent = avatar;
-                    document.getElementById('user-name').textContent = user.name;
-                    document.getElementById('user-role').textContent = user.role;
-                } else {
-                    loggedOutHeader.style.display = 'block';
-                    loggedInHeader.style.display = 'none';
-                }
-            }
-            
-            function renderHomePageButtons() {
-                const grid = document.getElementById('home-buttons-grid');
-                if (!grid) return;
-                const user = appState.currentUser;
-                let buttons = `
-                    <div class="home-button" data-action="show-general-assembly">🗣 General Assembly</div>
-                    <div class="home-button" data-action="show-special-assembly">👑 Special Assembly</div>
-                    <div class="home-button" data-action="show-notice-board">📢 Notice Board</div>
-                    <div class="home-button" data-action="show-drafts-voting">⚖️ Drafts & Voting</div>
-                    <div class="home-button" data-action="show-rules">📜 Rules of Clan</div>
-                    <div class="home-button ranking-btn" data-action="show-pdf-ranking">🏆 PDF Ranking Board</div>
-                    <div class="home-button image-btn" data-action="show-image-ranking">🖼️ Image Ranking Board</div>
-                    
-                    <div class="home-button" data-action="show-leader-chat">💬 Leader Chat (DM)</div>
-                    <div class="home-button" data-action="show-advisory">🧠 Give Advice</div>
-                `;
-
-                if (user && user.role === 'Leader') { // MODIFIED: Check if user exists
-                    buttons += `
-                        <div class="home-button leader-btn" data-action="show-leader-dashboard">🛡️ Leader Dashboard</div>
-                    `;
-                }
-
-                grid.innerHTML = buttons;
-            }
-
-            async function renderCabinetList() {
-                const listEl = document.getElementById('cabinet-player-list');
-                if (!listEl) return;
-                try {
-                    const metaDoc = await metaCollection.doc('main').get();
-                    const cabinetIds = metaDoc.data()?.cabinet || [];
-                    
-                    if (cabinetIds.length === 0) {
-                        listEl.innerHTML = '<span>No cabinet players assigned.</span>';
-                        return;
-                    }
-
-                    const cabinetUsers = appState.allUsersCache.filter(u => cabinetIds.includes(u.id));
-                    listEl.innerHTML = cabinetUsers.map(u => `<span>${u.name} (${u.role})</span>`).join('');
-
-                } catch (error) {
-                    console.error("Error rendering cabinet list:", error);
-                    listEl.innerHTML = '<span>Error loading cabinet.</span>';
-                }
-            }
-            
-            function getAvatar(user) {
-                if (!user || !user.name) return `<div class="profile-avatar avatar">?</div>`;
-                return `<div class="profile-avatar avatar">${user.name.charAt(0).toUpperCase()}</div>`;
-            }
-
-            // MODIFIED: renderPlayerList WITHOUT Online Status
-            function renderPlayerList(elementId, users) {
-                const listEl = document.getElementById(elementId);
-                if (!listEl) return;
-                const roleOrder = { 'Leader': 1, 'Co-Leader': 2, 'Elder': 3, 'Member': 4 };
-                
-                users.sort((a, b) => roleOrder[a.role] - roleOrder[b.role]);
-                
-                listEl.innerHTML = users.map(user => {
-                    return `
-                        <div class="player-list-item">
-                            ${getAvatar(user)}
-                            <div class="player-list-info">
-                                <div class="name">${user.name}</div>
-                                <div class="role">${user.role}</div>
-                            </div>
-                            </div>
-                    `;
-                }).join('');
-            }
-            // --- 7. REAL-TIME CHAT FUNCTIONS ---
-
-            function renderGeneralAssembly() {
-                const activeUsers = appState.allUsersCache.filter(u => u.status === 'active');
-                renderPlayerList('ga-player-list', activeUsers);
-                
-                appState.listeners.pinnedGA = metaCollection.doc('main')
-                    .onSnapshot((doc) => {
-                        const pinnedMsgId = doc.data()?.pinnedMessageGA;
-                        renderPinnedMessage('ga-pinned-message', pinnedMsgId, 'ga');
-                    });
-                
-                appState.listeners.generalMessages = messagesCollection
-                    .doc('general')
-                    .collection('chats')
-                    .orderBy('timestamp', 'asc')
-                    .limitToLast(100)
-                    .onSnapshot((snapshot) => {
-                        const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        renderMessages('ga-chat-box', messages, appState.allUsersCache, 'ga');
-                        
-                        // NEW: Play sound
-                        if (!appState.isFirstLoad.ga) {
-                            snapshot.docChanges().forEach((change) => {
-                                if (change.type === 'added') {
-                                    const msg = change.doc.data();
-                                    if (appState.currentUser && msg.userId !== appState.currentUser.id) {
-                                        playChatSound();
-                                    }
-                                }
-                            });
-                        }
-                        appState.isFirstLoad.ga = false;
-                        
-                    }, (error) => {
-                        console.error("Error listening to general chat:", error);
-                    });
-            }
-            
-            function renderSpecialAssembly() {
-                const leadership = appState.allUsersCache.filter(u => (u.role === 'Leader' || u.role === 'Co-Leader') && u.status === 'active');
-                renderPlayerList('sa-player-list', leadership);
-                
-                appState.listeners.pinnedSA = metaCollection.doc('main')
-                    .onSnapshot((doc) => {
-                        const pinnedMsgId = doc.data()?.pinnedMessageSA;
-                        renderPinnedMessage('sa-pinned-message', pinnedMsgId, 'sa');
-                    });
-                
-                appState.listeners.specialMessages = messagesCollection
-                    .doc('special')
-                    .collection('chats')
-                    .orderBy('timestamp', 'asc')
-                    .limitToLast(100)
-                    .onSnapshot((snapshot) => {
-                        const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        renderMessages('sa-chat-box', messages, appState.allUsersCache, 'sa');
-                        
-                        // NEW: Play sound
-                        if (!appState.isFirstLoad.sa) {
-                            snapshot.docChanges().forEach((change) => {
-                                if (change.type === 'added') {
-                                     const msg = change.doc.data();
-                                     if (appState.currentUser && msg.userId !== appState.currentUser.id) {
-                                        playChatSound();
-                                    }
-                                }
-                            });
-                        }
-                        appState.isFirstLoad.sa = false;
-                        
-                    }, (error) => {
-                        console.error("Error listening to special chat:", error);
-                    });
-            }
-
-            function renderChatControls(pagePrefix) {
-                const container = document.getElementById(`${pagePrefix}-controls-container`);
-                if (!container) return;
-
-                const user = appState.currentUser;
-                // MODIFIED: Don't render if no user
-                if (!user) {
-                    container.innerHTML = '';
-                    return;
-                }
-                
-                let controlsHTML = '';
-
-                const memberColors = `
-                    <option value="#333333">Black</option>
-                    <option value="#FFFFFF">White</option>
-                    <option value="#FFD700">Yellow</option>
-                    <option value="#87CEEB">Sky Blue</option>
-                `;
-                const coLeaderColors = `
-                    ${memberColors}
-                    <option value="#DC3545">Red</option>
-                    <option value="#007BFF">Blue</option>
-                `;
-
-                if (user.role === 'Leader') {
-                    controlsHTML = `
-                        <div>
-                            <label for="${pagePrefix}-color-picker">Color:</label>
-                            <input type="color" id="${pagePrefix}-color-picker" value="#333333">
-                        </div>
-                        <div>
-                            <label for="${pagePrefix}-font-select">Font:</label>
-                            <select id="${pagePrefix}-font-select">
-                                <option value="'Poppins', sans-serif">Poppins (Default)</option>
-                                <option value="Arial, sans-serif">Arial</option>
-                                <option value="'Courier New', monospace">Courier New</option>
-                                <option value="'Times New Roman', serif">Times New Roman</option>
-                            </select>
-                        </div>
-                    `;
-                } else if (user.role === 'Co-Leader') {
-                    controlsHTML = `
-                        <div>
-                            <label for="${pagePrefix}-color-select">Color:</label>
-                            <select id="${pagePrefix}-color-select">
-                                ${coLeaderColors}
-                            </select>
-                        </div>
-                    `;
-                } else if (user.role === 'Member' || user.role === 'Elder') {
-                    controlsHTML = `
-                        <div>
-                            <label for="${pagePrefix}-color-select">Color:</label>
-                            <select id="${pagePrefix}-color-select">
-                                ${memberColors}
-                            </select>
-                        </div>
-                    `;
-                }
-
-                container.innerHTML = controlsHTML;
-            }
-
-            async function renderPinnedMessage(elementId, messageId, room) {
-                const pinEl = document.getElementById(elementId);
-                if (!pinEl) return;
-                
-                if (!messageId) {
-                    pinEl.style.display = 'none';
-                    return;
-                }
-                
-                try {
-                    const roomName = (room === 'ga' ? 'general' : 'special');
-                    const msgDoc = await messagesCollection.doc(roomName).collection('chats').doc(messageId).get();
-                    if (!msgDoc.exists) {
-                        pinEl.style.display = 'none';
-                        return;
-                    }
-                    
-                    const msg = msgDoc.data();
-                    const user = appState.allUsersCache.find(u => u.id === msg.userId);
-                    let content = msg.text;
-                    if (msg.type === 'image') content = '📷 Image';
-                    if (msg.type === 'video') content = '🎥 Video';
-                    
-                    pinEl.innerHTML = `
-                        <div class="pinned-message-content">
-                            <b>📌 PINNED:</b> ${user ? user.name : '...'} - ${content.substring(0, 50)}...
-                        </div>
-                        ${(appState.currentUser && appState.currentUser.role === 'Leader') ? 
-                            `<button class="btn btn-icon btn-sm" data-action="unpin-message" data-room="${room}">✖</button>` : ''}
-                    `;
-                    pinEl.style.display = 'flex';
-                    
-                } catch (error) {
-                    console.error("Error rendering pinned message:", error);
-                    pinEl.style.display = 'none';
-                }
-            }
-
-            function renderMessages(boxId, messages, users, room) {
-                const box = document.getElementById(boxId);
-                if (!box) return;
-
-                box.innerHTML = messages.map(msg => {
-                    const user = users.find(u => u.id === msg.userId);
-                    if (!user) return ''; 
-                    
-                    let roleClass = '';
-                    if (user.role === 'Leader') roleClass = 'message-leader';
-                    if (user.role === 'Co-Leader') roleClass = 'message-coleader';
-
-                    const color = msg.color || '#333333';
-                    const font = msg.font || "'Poppins', sans-serif";
-                    
-                    let textShadow = 'none';
-                    const lightColors = ['#ffffff', '#ffd700', '#87ceeb'];
-                    if (lightColors.includes(color.toLowerCase())) {
-                        textShadow = '0 0 3px rgba(0,0,0,0.7)';
-                    }
-                    
-                    const isLeader = user.role === 'Leader';
-                    const fontWeight = isLeader ? '700' : 'normal';
-                    
-                    const style = `color: ${color}; font-family: ${font}; font-weight: ${fontWeight}; text-shadow: ${textShadow};`;
-
-                    const timestamp = msg.timestamp?.toDate ? msg.timestamp.toDate() : new Date();
-
-                    // MODIFIED: Check if currentUser exists
-                    const meOrOther = (appState.currentUser && msg.userId === appState.currentUser.id) ? 'me' : 'other';
-
-                    // Media Content
-                    let mediaHTML = '';
-                    if (msg.type === 'image') {
-                        mediaHTML = `<div class="message-media"><img src="${msg.url}" alt="Image" onclick="window.open('${msg.url}')"></div>`;
-                    } else if (msg.type === 'video') {
-                        mediaHTML = `<div class="message-media"><video controls src="${msg.url}"></video></div>`;
-                    } else if (msg.type === 'file') {
-                        mediaHTML = `<div class="message-media"><a href="${msg.url}" target="_blank" class="message-media-download">Download File</a></div>`;
-                    }
-                    
-                    // Leader actions
-                    let leaderActions = '';
+                    break;
+                case 'leader-dashboard':
                     if (appState.currentUser && appState.currentUser.role === 'Leader') {
-                        leaderActions = `
-                            <button class="btn-icon" data-action="pin-message" data-id="${msg.id}" data-room="${room}" title="Pin">📌</button>
-                            <button class="btn-icon" data-action="delete-message" data-id="${msg.id}" data-room="${room}" title="Delete">🗑️</button>
-                        `;
+                        loadLeaderDashboard();
+                    } else {
+                        showPage('home');
                     }
+                    break;
+                case 'force-mode-dashboard':
+                     if (appState.currentUser && appState.currentUser.role === 'Leader') {
+                        loadForceModeDashboard();
+                    } else {
+                        showPage('home');
+                    }
+                    break;
+            }
+        }
+        
+        function detachAllListeners() {
+            console.log('Detaching listeners...');
+            for (const key in appState.listeners) {
+                if (typeof appState.listeners[key] === 'function') {
+                    appState.listeners[key](); 
+                }
+            }
+            appState.listeners = {}; 
+        }
+        
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const pageId = e.target.dataset.page;
+                if (pageId) showPage(pageId);
+            });
+        });
+        
+        hamburgerBtn.addEventListener('click', () => appSidebar.classList.add('active'));
+        sidebarCloseBtn.addEventListener('click', () => appSidebar.classList.remove('active'));
 
-                    return `
-                        <div class="chat-message ${roleClass} ${meOrOther}">
-                            ${getAvatar(user)}
-                            <div class="message-content">
-                                <div class="message-sender">${user.name} ${user.role === 'Leader' ? '👑' : (user.role === 'Co-Leader' ? '⭐' : '')}</div>
-                                ${msg.text ? `<div class="message-text" style="${style}">${msg.text}</div>` : ''}
-                                ${mediaHTML}
-                                <div class="message-timestamp">${timestamp.toLocaleString()}</div>
-                            </div>
-                            <div class="message-actions">
-                                ${leaderActions}
+        document.body.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-link') && e.target.dataset.page) {
+                e.preventDefault();
+                showPage(e.target.dataset.page);
+            }
+        });
+
+        // =================================================================
+        // 5. AUTHENTICATION (PUBLIC-FIRST MODEL)
+        // =================================================================
+
+        function initApp() {
+            const userJson = sessionStorage.getItem('currentUser');
+            if (userJson) {
+                appState.currentUser = JSON.parse(userJson);
+                updateUIForLoggedInUser();
+            } else {
+                appState.currentUser = null;
+                updateUIForLoggedOutUser();
+            }
+            showPage('home');
+        }
+        
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const playerId = document.getElementById('login-id').value.trim();
+            const password = document.getElementById('login-password').value;
+            showError(loginError, '');
+            loginSpinner.style.display = 'block';
+
+            try {
+                const userDocRef = db.collection('users').doc(playerId);
+                const doc = await userDocRef.get();
+                if (!doc.exists) throw new Error('Player ID not found.');
+                const userData = doc.data();
+                if (userData.password !== password) throw new Error('Incorrect password.');
+                if (userData.status === 'banned') throw new Error('This account is banned.');
+                if (userData.status === 'suspended') throw new Error('This account is suspended.');
+
+                appState.currentUser = { id: doc.id, ...userData };
+                sessionStorage.setItem('currentUser', JSON.stringify(appState.currentUser));
+                updateUIForLoggedInUser();
+                showPage('home'); 
+            } catch (error) {
+                showError(loginError, error.message);
+            } finally {
+                loginSpinner.style.display = 'none';
+            }
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            registerSpinner.style.display = 'block';
+            showError(registerError, '');
+            const playerId = document.getElementById('reg-player-id').value.trim();
+            
+            try {
+                const userDocRef = db.collection('users').doc(playerId);
+                const doc = await userDocRef.get();
+                if (doc.exists) throw new Error('This Player ID is already registered.');
+                
+                const generatedPassword = Math.floor(100000 + Math.random() * 900000).toString();
+                const newUser = {
+                    id: playerId,
+                    name: document.getElementById('reg-player-name').value,
+                    clanName: document.getElementById('reg-clan-name').value,
+                    clanId: document.getElementById('reg-clan-id').value,
+                    dob: document.getElementById('reg-dob').value,
+                    country: document.getElementById('reg-country').value,
+                    state: document.getElementById('reg-state').value,
+                    languages: document.getElementById('reg-languages').value,
+                    role: document.getElementById('reg-role').value,
+                    password: generatedPassword,
+                    status: 'active',
+                    createdAt: FieldValue.serverTimestamp(),
+                    mutedUntil: null, // For Co-Leader mute
+                    chatBlocked: false // For Force Mode block
+                };
+                await userDocRef.set(newUser);
+                
+                await db.collection('meta').doc('main').update({
+                    newRegistrations: FieldValue.arrayUnion(newUser)
+                });
+                
+                alert(`Registration Successful!\n\nYour Player ID: ${playerId}\nYour NEW Password: ${generatedPassword}\n\nPlease save this password.`);
+                showPage('login');
+                registerForm.reset();
+            } catch (error) {
+                showError(registerError, error.message);
+            } finally {
+                registerSpinner.style.display = 'none';
+            }
+        });
+        
+        logoutBtn.addEventListener('click', () => {
+            sessionStorage.removeItem('currentUser');
+            appState.currentUser = null;
+            detachAllListeners(); 
+            updateUIForLoggedOutUser();
+            showPage('home'); 
+        });
+
+        function updateUIForLoggedInUser() {
+            document.getElementById('sidebar-auth-links').classList.add('hidden');
+            document.getElementById('user-profile-sidebar').classList.remove('hidden');
+            document.getElementById('logout-btn').classList.remove('hidden');
+            document.getElementById('sidebar-username').textContent = appState.currentUser.name;
+            document.getElementById('sidebar-userrole').textContent = appState.currentUser.role;
+            
+            if (appState.currentUser.role !== 'Member') {
+                document.getElementById('nav-special-chat-link').classList.remove('hidden');
+            }
+            if (appState.currentUser.role === 'Leader') {
+                document.getElementById('nav-leader-link').classList.remove('hidden');
+            }
+            document.getElementById('home-username').textContent = appState.currentUser.name;
+        }
+        
+        function updateUIForLoggedOutUser() {
+            document.getElementById('sidebar-auth-links').classList.remove('hidden');
+            document.getElementById('user-profile-sidebar').classList.add('hidden');
+            document.getElementById('logout-btn').classList.add('hidden');
+            document.getElementById('sidebar-username').textContent = 'Guest';
+            document.getElementById('sidebar-userrole').textContent = '';
+            document.getElementById('nav-special-chat-link').classList.add('hidden');
+            document.getElementById('nav-leader-link').classList.add('hidden');
+            document.getElementById('home-username').textContent = 'Guest';
+        }
+
+        sidebarLoginBtn.addEventListener('click', () => showPage('login'));
+        sidebarRegisterBtn.addEventListener('click', () => showPage('register'));
+        gotoRegisterBtn.addEventListener('click', () => showPage('register'));
+        gotoLoginBtn.addEventListener('click', () => showPage('login'));
+        
+        // =================================================================
+        // 6. PAGE LOADERS
+        // =================================================================
+
+        function loadHomePage() {
+            if(appState.currentUser) {
+                document.getElementById('home-username').textContent = appState.currentUser.name;
+            } else {
+                document.getElementById('home-username').textContent = 'Guest';
+            }
+            appState.listeners.homeMeta = db.collection('meta').doc('main').onSnapshot(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    document.getElementById('pinned-message-ga').textContent = data.pinnedMessageGA_content || 'No pinned message.';
+                    document.getElementById('pinned-message-sa').textContent = data.pinnedMessageSA_content || 'No pinned message.';
+                }
+            });
+        }
+
+        // -- Advanced Chat Loader --
+        async function loadChat(type) { 
+            const isGeneral = (type === 'general');
+            const suffix = isGeneral ? 'ga' : 'sa';
+            
+            const messagesContainer = document.getElementById(`chat-messages-${suffix}`);
+            const chatForm = document.getElementById(`chat-form-${suffix}`);
+            const chatInput = document.getElementById(`chat-input-${suffix}`);
+            const fileInput = document.getElementById(`file-upload-${suffix}`);
+            const chatSpinner = document.getElementById(`chat-spinner-${suffix}`);
+            const loginPrompt = document.getElementById(`chat-login-prompt-${suffix}`);
+            const controlsContainer = document.getElementById(`chat-controls-${suffix}`);
+            
+            // 1. Load Player List
+            loadPlayerList(type);
+            
+            // 2. Load Pinned Message
+            loadPinnedMessage(type);
+
+            // 3. Listen for new messages
+            const chatCollection = db.collection('messages').doc(type).collection('chats');
+            appState.listeners.chat = chatCollection.orderBy('createdAt', 'desc').limit(50).onSnapshot(snapshot => {
+                messagesContainer.innerHTML = '';
+                const docs = snapshot.docs.reverse(); // Show oldest first
+                docs.forEach(doc => {
+                    const msg = {id: doc.id, ...doc.data()};
+                    const msgElement = createMessageElement(msg, type);
+                    messagesContainer.appendChild(msgElement);
+                });
+                
+                // Scroll to bottom
+                messagesContainer.parentElement.scrollTop = messagesContainer.parentElement.scrollHeight;
+                
+                // Handle new message notification
+                if (!appState.isInitialChatLoad && snapshot.docChanges().length > 0) {
+                    const lastChange = snapshot.docChanges()[snapshot.docChanges().length - 1];
+                    if (lastChange.type === 'added') {
+                        const newMsg = lastChange.doc.data();
+                        // Play sound only if it's not from the current user
+                        if (!appState.currentUser || newMsg.userId !== appState.currentUser.id) {
+                            playNotificationSound();
+                        }
+                    }
+                }
+                appState.isInitialChatLoad = false;
+                
+            }, (error) => console.error("Error loading chat: ", error));
+
+            // 4. Handle UI based on auth
+            if (appState.currentUser) {
+                if (loginPrompt) loginPrompt.classList.add('hidden');
+                chatForm.classList.remove('hidden');
+                controlsContainer.classList.remove('hidden');
+                renderChatControls(type); // Render controls
+            } else {
+                if (loginPrompt) loginPrompt.classList.remove('hidden');
+                chatForm.classList.add('hidden');
+                controlsContainer.classList.add('hidden');
+            }
+
+            // 5. Handle file input change
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    if (isGeneral) appState.fileToUploadGA = file;
+                    else appState.fileToUploadSA = file;
+                    chatInput.placeholder = `Attaching: ${file.name}`;
+                }
+            });
+            
+            // 6. Handle form submission
+            if (!chatForm.dataset.listenerAttached) { 
+                chatForm.addEventListener('submit', (e) => handleChatMessagePost(e, type));
+                chatForm.dataset.listenerAttached = 'true';
+            }
+        }
+        
+        async function handleChatMessagePost(e, type) {
+            e.preventDefault();
+            if (!appState.currentUser) return;
+            
+            const isGeneral = (type === 'general');
+            const suffix = isGeneral ? 'ga' : 'sa';
+            const chatInput = document.getElementById(`chat-input-${suffix}`);
+            const fileInput = document.getElementById(`file-upload-${suffix}`);
+            const chatSpinner = document.getElementById(`chat-spinner-${suffix}`);
+            const text = chatInput.value;
+            const file = isGeneral ? appState.fileToUploadGA : appState.fileToUploadSA;
+            
+            if (!text && !file) return;
+
+            // Check permissions
+            if (appState.currentUser.chatBlocked) {
+                alert('Your chat privileges are blocked.'); return;
+            }
+            if (appState.currentUser.mutedUntil && appState.currentUser.mutedUntil.toDate() > new Date()) {
+                alert(`You are muted until ${appState.currentUser.mutedUntil.toDate().toLocaleString()}`); return;
+            }
+            if (!isGeneral && !['Leader', 'Co-Leader'].includes(appState.currentUser.role)) {
+                showError(document.getElementById('sa-post-error'), 'Only Leader and Co-Leaders can post here.'); return;
+            }
+            
+            chatSpinner.style.display = 'block';
+            e.target.style.pointerEvents = 'none';
+            
+            try {
+                let fileURL = null, fileType = 'text', storagePath = null;
+                if (file) {
+                    fileType = file.type.startsWith('image') ? 'image' : 'video';
+                    storagePath = `chat/${type}/${Date.now()}_${file.name}`;
+                    const storageRef = storage.ref(storagePath);
+                    await storageRef.put(file);
+                    fileURL = await storageRef.getDownloadURL();
+                }
+                
+                // Get style from controls
+                const controlsContainer = document.getElementById(`chat-controls-${suffix}`);
+                const color = controlsContainer.querySelector('.chat-color-select')?.value || '#0b0b0b';
+                const font = controlsContainer.querySelector('.chat-font-select')?.value || 'Poppins';
+
+                const messageData = {
+                    text: text,
+                    userId: appState.currentUser.id,
+                    userName: appState.currentUser.name,
+                    userRole: appState.currentUser.role,
+                    type: fileType,
+                    url: fileURL,
+                    storagePath: storagePath, // For deletion
+                    style: { color, font }, // Save style
+                    createdAt: FieldValue.serverTimestamp()
+                };
+                
+                await db.collection('messages').doc(type).collection('chats').add(messageData);
+                
+                e.target.reset();
+                chatInput.placeholder = 'Type a message...';
+                if (isGeneral) appState.fileToUploadGA = null;
+                else appState.fileToUploadSA = null;
+                fileInput.value = ''; 
+                
+            } catch (error) {
+                console.error("Error sending message: ", error);
+            } finally {
+                chatSpinner.style.display = 'none';
+                e.target.style.pointerEvents = 'auto';
+            }
+        }
+        
+        function renderChatControls(type) {
+            const suffix = (type === 'general') ? 'ga' : 'sa';
+            const container = document.getElementById(`chat-controls-${suffix}`);
+            if (!appState.currentUser) {
+                container.innerHTML = ''; return;
+            }
+            
+            const role = appState.currentUser.role;
+            let controlsHTML = '';
+            
+            if (role === 'Leader') {
+                controlsHTML = `
+                    <label>Color: <input type="color" class="chat-color-select" value="#0b0b0b"></label>
+                    <label>Font: 
+                        <select class="chat-font-select">
+                            <option value="Poppins">Poppins</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Arial">Arial</option>
+                            <option value="Courier New">Courier</option>
+                        </select>
+                    </label>
+                `;
+            } else if (role === 'Co-Leader') {
+                controlsHTML = `
+                    <label>Color: 
+                        <select class="chat-color-select">
+                            <option value="#0b0b0b">Black</option>
+                            <option value="#ffffff">White</option>
+                            <option value="#f0c674">Yellow</option>
+                            <option value="#87ceeb">Sky Blue</option>
+                            <option value="#f85149">Red</option>
+                            <option value="#0077b6">Blue</option>
+                        </select>
+                    </label>
+                `;
+            } else { // Member & Elder
+                controlsHTML = `
+                    <label>Color: 
+                        <select class="chat-color-select">
+                            <option value="#0b0b0b">Black</option>
+                            <option value="#ffffff">White</option>
+                            <option value="#f0c674">Yellow</option>
+                            <option value="#87ceeb">Sky Blue</option>
+                        </select>
+                    </label>
+                `;
+            }
+            container.innerHTML = controlsHTML;
+        }
+
+        async function loadPlayerList(type) {
+            const listId = (type === 'general') ? 'player-list-ga' : 'player-list-sa';
+            const listEl = document.getElementById(listId);
+            listEl.innerHTML = '<p>Loading...</p>';
+            
+            let query = db.collection('users').where('status', '==', 'active');
+            if (type === 'special') {
+                query = query.where('role', 'in', ['Leader', 'Co-Leader']);
+            }
+            
+            appState.listeners.playerList = query.onSnapshot(snapshot => {
+                listEl.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const user = doc.data();
+                    const initial = user.name.charAt(0).toUpperCase();
+                    listEl.innerHTML += `
+                        <div class="player-list-item">
+                            <div class="avatar">${initial}</div>
+                            <div class="info">
+                                <span class="name">${user.name}</span>
+                                <span class="role">${user.role}</span>
                             </div>
                         </div>
                     `;
-                }).join('');
-                box.scrollTop = box.scrollHeight;
-            }
-            
-            function renderNoticeBoard() {
-                const listEl = document.getElementById('notice-list');
-                const formEl = document.getElementById('notice-board-post-form');
-                if (!listEl || !formEl) return;
-
-                // MODIFIED: Show form only for logged-in cabinet members
-                if (appState.currentUser) {
-                    metaCollection.doc('main').get().then(doc => {
-                        const cabinetIds = doc.data()?.cabinet || [];
-                        if (cabinetIds.includes(appState.currentUser.id)) {
-                            formEl.style.display = 'block';
-                        } else {
-                            formEl.style.display = 'none';
-                        }
-                    }).catch(error => console.error("Error getting cabinet status:", error));
-                } else {
-                    formEl.style.display = 'none';
-                }
-
-                appState.listeners.notices = noticesCollection
-                    .orderBy('timestamp', 'desc')
-                    .onSnapshot(snapshot => {
-                        const notices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        
-                        if (notices.length === 0) {
-                            listEl.innerHTML = '<p>No notices have been posted.</p>';
-                            return;
-                        }
-                        
-                        listEl.innerHTML = notices.map(notice => {
-                            const author = appState.allUsersCache.find(u => u.id === notice.userId);
-                            const timestamp = notice.timestamp?.toDate ? notice.timestamp.toDate() : new Date();
-                            return `
-                                <div class="item-card">
-                                    <h3>${notice.title}</h3>
-                                    <p>${notice.content.replace(/\n/g, '<br>')}</p>
-                                    <div class="item-meta">
-                                        Posted by ${author ? author.name : 'Unknown'} on ${timestamp.toLocaleDateString()}
-                                    </div>
-                                </div>
-                            `;
-                        }).join('');
-                    }, error => console.error("Error listening to notices:", error));
-            }
-            
-            function renderRules() {
-                const listEl = document.getElementById('rules-list');
-                if (!listEl) return;
-                
-                appState.listeners.rules = rulesCollection
-                    .orderBy('activatedAt', 'asc') 
-                    .onSnapshot(snapshot => {
-                        const rules = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                        if (rules.length === 0) {
-                            listEl.innerHTML = '<p>No clan rules have been activated yet.</p>';
-                            return;
-                        }
-                        
-                        listEl.innerHTML = rules.map((rule, index) => `
-                            <div class="item-card">
-                                <h3>Rule ${index + 1}: ${rule.title}</h3>
-                                <p>${rule.description.replace(/\n/g, '<br>')}</p>
-                                ${(appState.currentUser && appState.currentUser.role === 'Leader') ? 
-                                    `<button class="btn btn-danger btn-sm leader-action-btn" data-action="leader-delete-rule" data-id="${rule.id}">Delete</button>` : ''
-                                }
-                            </div>
-                        `).join('');
-                    }, error => console.error("Error listening to rules:", error));
-            }
-            // --- 8. NEW PDF/IMAGE RANKING FUNCTIONS (Public) ---
-
-            function renderPdfRankingList() {
-                const listEl = document.getElementById('pdf-ranking-list');
-                if (!listEl) return;
-                
-                appState.listeners.pdfRankings = pdfRankingsCollection
-                    .orderBy('uploadedAt', 'desc')
-                    .onSnapshot(snapshot => {
-                        const pdfs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        
-                        if (pdfs.length === 0) {
-                            listEl.innerHTML = '<p>No PDF rankings have been uploaded yet.</p>';
-                            return;
-                        }
-                        
-                        listEl.innerHTML = pdfs.map(pdf => {
-                            const timestamp = pdf.uploadedAt?.toDate ? pdf.uploadedAt.toDate() : new Date();
-                            return `
-                                <div class="pdf-list-item">
-                                    <div class="pdf-info">
-                                        <h4>${pdf.title}</h4>
-                                        <p>${pdf.description || ''}</p>
-                                        <small>Uploaded on: ${timestamp.toLocaleDateString()}</small>
-                                    </div>
-                                    <a href="${pdf.url}" target="_blank" class="btn btn-primary">Download PDF</a>
-                                </div>
-                            `;
-                        }).join('');
-                    }, error => console.error("Error listening to PDF rankings:", error));
-            }
-
-            function renderImageRankingList() {
-                const listEl = document.getElementById('image-ranking-list');
-                if (!listEl) return;
-                
-                appState.listeners.imageRankings = imageRankingsCollection
-                    .orderBy('uploadedAt', 'desc')
-                    .onSnapshot(snapshot => {
-                        const images = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        
-                        if (images.length === 0) {
-                            listEl.innerHTML = '<p>No image rankings have been uploaded yet.</p>';
-                            return;
-                        }
-                        
-                        listEl.innerHTML = images.map(img => {
-                            return `
-                                <div class="image-card">
-                                    <img src="${img.url}" alt="${img.title}" style="cursor:pointer;" onclick="window.open('${img.url}')">
-                                    <div class="image-card-info">
-                                        <h4>${img.title}</h4>
-                                        <a href="${img.url}" target="_blank" class="btn btn-primary btn-sm">View Full Image</a>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('');
-                    }, error => console.error("Error listening to Image rankings:", error));
-            }
-
-            // --- 9. LEADER DASHBOARD FUNCTIONS ---
-
-            function renderLeaderDashboard() {
-                const listEl = document.getElementById('new-registrations-list');
-                if (!listEl) return;
-                
-                appState.listeners.newRegistrations = metaCollection.doc('main')
-                    .onSnapshot(doc => {
-                        if (!doc.exists) {
-                            console.error("Meta document does not exist.");
-                            return;
-                        }
-                        const newRegistrations = doc.data()?.newRegistrations || [];
-                        
-                        if (newRegistrations.length === 0) {
-                            listEl.innerHTML = '<p>No new registrations.</p>';
-                            return;
-                        }
-                        
-                        listEl.innerHTML = newRegistrations.map(reg => {
-                            return `
-                                <div class="item-card">
-                                    <p><b>Name:</b> ${reg.name} (<b>Role:</b> ${reg.role})</p>
-                                    <p><b>ID:</b> ${reg.id}</p>
-                                    <p><b>Password:</b> ${reg.password}</p>
-                                    <p><b>Country:</b> ${reg.country} (${reg.state || 'N/A'})</p>
-                                    <p><b>Languages:</b> ${reg.languages}</p>
-                                    <button class="btn btn-success btn-sm" data-action="acknowledge-registration" data-id="${reg.id}">Acknowledge</button>
-                                </div>
-                            `;
-                        }).join('');
-                    }, error => console.error("Error listening to new registrations:", error));
-            }
-
-            async function renderPlayersActions() {
-                const bodyEl = document.getElementById('players-actions-table-body');
-                if (!bodyEl) return;
-                
-                try {
-                    // Re-cache users every time this page is loaded to get fresh data
-                    await cacheAllUsers();
-                    const users = appState.allUsersCache;
-
-                    bodyEl.innerHTML = users.map(user => {
-                        const joinedDate = user.createdAt?.toDate ? user.createdAt.toDate() : new Date();
-                        return `
-                            <tr>
-                                <td>
-                                    <b>${user.name}</b><br>
-                                    <small>${user.id}</small>
-                                </td>
-                                <td>${user.password}</td>
-                                <td>
-                                    <select class="form-control" data-action="player-action-select" data-task="role" data-id="${user.id}" ${user.role === 'Leader' ? 'disabled' : ''}>
-                                        <option value="Member" ${user.role === 'Member' ? 'selected' : ''}>Member</option>
-                                        <option value="Elder" ${user.role === 'Elder' ? 'selected' : ''}>Elder</option>
-                                        <option value="Co-Leader" ${user.role === 'Co-Leader' ? 'selected' : ''}>Co-Leader</option>
-                                        <option value="Leader" ${user.role === 'Leader' ? 'selected' : ''}>Leader</option>
-                                    </select>
-                                </td>
-                                <td>
-                                    <span style="font-weight: 600; text-transform: capitalize; color: ${user.status === 'active' ? 'green' : 'red'};">${user.status}</span>
-                                </td>
-                                <td>${joinedDate.toLocaleDateString()}</td>
-                                <td>
-                                    <button class="btn btn-primary btn-sm" data-action="show-player-details" data-id="${user.id}">Details</button>
-                                    ${user.role !== 'Leader' ? `
-                                        <button class="btn btn-secondary btn-sm" data-action="player-action" data-task="suspend" data-id="${user.id}">Suspend</button>
-                                        <button class="btn btn-warning btn-sm" data-action="player-action" data-task="ban" data-id="${user.id}">Ban</button>
-                                        <button class="btn btn-danger btn-sm" data-action="player-action" data-task="delete" data-id="${user.id}">Delete</button>
-                                    ` : ''}
-                                    ${user.status !== 'active' ? `
-                                        <button class="btn btn-success btn-sm" data-action="player-action" data-task="reactivate" data-id="${user.id}">Reactivate</button>
-                                    ` : ''}
-                                </td>
-                            </tr>
-                        `
-                    }).join('');
-                    
-                    bodyEl.querySelectorAll('select[data-action="player-action-select"]').forEach(select => {
-                        select.addEventListener('change', (e) => {
-                            handlePlayerAction(e.target.dataset.id, 'role', e.target.value);
-                        });
-                    });
-
-                } catch (error) {
-                    console.error("Error rendering player actions:", error);
-                    bodyEl.innerHTML = `<tr><td colspan="6">Error loading players.</td></tr>`;
-                }
-            }
-            
-            async function renderPlayerDetails(userId) {
-                const user = appState.allUsersCache.find(u => u.id === userId);
-                if (!user) {
-                    showPage('players-actions-page');
-                    return;
-                }
-
-                document.getElementById('player-detail-name').textContent = user.name;
-                const joinedDate = user.createdAt?.toDate ? user.createdAt.toDate() : new Date();
-                
-                document.getElementById('player-detail-info').innerHTML = `
-                    <p><strong>Player ID:</strong> ${user.id}</p>
-                    <p><strong>Role:</strong> ${user.role}</p>
-                    <p><strong>Status:</strong> ${user.status}</p>
-                    <p><strong>Clan:</strong> ${user.clanName} (${user.clanId})</p>
-                    <p><strong>From:</strong> ${user.state ? user.state + ', ' : ''}${user.country}</p>
-                    <p><strong>Languages:</strong> ${user.languages}</p>
-                    <p><strong>Joined:</strong> ${joinedDate.toLocaleString()}</p>
-                `;
-                
-                const activityEl = document.getElementById('player-detail-activity');
-                activityEl.innerHTML = '<p>Loading activity...</p>';
-                let activity = [];
-
-                try {
-                    const gaMsgs = await messagesCollection.doc('general').collection('chats').where('userId', '==', userId).limit(20).get();
-                    gaMsgs.docs.forEach(m => {
-                        const data = m.data();
-                        let content = data.text;
-                        if(data.type) content = `[${data.type}]`;
-                        activity.push({ time: data.timestamp.toDate(), text: `[General] ${content}` });
-                    });
-                    
-                    const saMsgs = await messagesCollection.doc('special').collection('chats').where('userId', '==', userId).limit(20).get();
-                    saMsgs.docs.forEach(m => {
-                        const data = m.data();
-                        let content = data.text;
-                        if(data.type) content = `[${data.type}]`;
-                        activity.push({ time: data.timestamp.toDate(), text: `[Special] ${content}` });
-                    });
-
-                    const dms = await dmsCollection.where('userId', '==', userId).limit(20).get();
-                    dms.docs.forEach(m => {
-                        const data = m.data();
-                        activity.push({ time: data.timestamp.toDate(), text: `[DM to Leader] ${data.subject}: ${data.message}` });
-                    });
-                    
-                    const advice = await adviceCollection.where('userId', '==', userId).limit(20).get();
-                    advice.docs.forEach(m => {
-                        const data = m.data();
-                        activity.push({ time: data.timestamp.toDate(), text: `[Advice] ${data.subject}: ${data.message}` });
-                    });
-                    
-                    activity.sort((a, b) => b.time - a.time);
-                    
-                    if (activity.length === 0) {
-                        activityEl.innerHTML = '<p>No activity recorded.</p>';
-                    } else {
-                        activityEl.innerHTML = activity.map(a => `
-                            <div class="advice-item">
-                                <small>${a.time.toLocaleString()}</small>
-                                <p>${a.text}</p>
-                            </div>
-                        `).join('');
-                    }
-                } catch (error) {
-                    console.error("Error loading player activity:", error);
-                    activityEl.innerHTML = '<p>Error loading activity.</p>';
-                }
-            }
-
-            function renderQuarry() {
-                const listEl = document.getElementById('quarry-list');
-                if (!listEl) return;
-                
-                appState.listeners.dms = dmsCollection
-                    .orderBy('timestamp', 'desc')
-                    .onSnapshot(snapshot => {
-                        const allDMs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        const threads = {};
-
-                        allDMs.forEach(dm => {
-                            const threadId = dm.threadId || dm.id;
-                            if (!threads[threadId]) {
-                                threads[threadId] = [];
-                            }
-                            threads[threadId].push(dm);
-                        });
-
-                        const sortedThreadIds = Object.keys(threads).sort((a, b) => {
-                            const lastMsgA = threads[a].reduce((latest, msg) => msg.timestamp.toDate() > latest ? msg.timestamp.toDate() : latest, new Date(0));
-                            const lastMsgB = threads[b].reduce((latest, msg) => msg.timestamp.toDate() > latest ? msg.timestamp.toDate() : latest, new Date(0));
-                            return lastMsgB - lastMsgA;
-                        });
-
-                        if (sortedThreadIds.length === 0) {
-                            listEl.innerHTML = '<p>Your inbox is empty.</p>';
-                            return;
-                        }
-
-                        listEl.innerHTML = sortedThreadIds.map(threadId => {
-                            const threadMessages = threads[threadId].sort((a, b) => a.timestamp.toDate() - b.timestamp.toDate());
-                            const firstDM = threadMessages[0];
-                            const sender = appState.allUsersCache.find(u => u.id === firstDM.userId);
-
-                            return `
-                                <div class="item-card">
-                                    <h3>${firstDM.subject}</h3>
-                                    <div class="item-meta">
-                                        From: ${sender ? sender.name : 'Unknown'}
-                                    </div>
-                                    
-                                    <div class="advice-section" style="padding-left: 15px; border-left: 3px solid #eee;">
-                                        ${threadMessages.map(dm => {
-                                            const isReply = dm.userId === appState.currentUser.id;
-                                            const timestamp = dm.timestamp.toDate();
-                                            return `
-                                                <div class="advice-item">
-                                                    <p>${dm.message}</p>
-                                                    <small><b>${isReply ? 'Your Reply' : (sender ? sender.name : 'Their') + ' Message'}:</b> ${timestamp.toLocaleString()}</small>
-                                                </div>
-                                            `
-                                        }).join('')}
-                                    </div>
-                                    
-                                    <form class="reply-dm-form" style="margin-top: 15px;">
-                                        <textarea id="reply-dm-${firstDM.id}" class="form-control" placeholder="Type your reply..."></textarea>
-                                        <button type="button" class="btn btn-primary btn-sm" style="margin-top: 5px;" data-action="reply-dm" data-id="${firstDM.id}">Send Reply</button>
-                                    </form>
-                                </div>
-                            `;
-                        }).join('');
-                    }, error => console.error("Error listening to DMs:", error));
-            }
-            
-            function renderAdvisoryInbox() {
-                const listEl = document.getElementById('advisory-inbox-list');
-                if (!listEl) return;
-                
-                appState.listeners.advice = adviceCollection
-                    .orderBy('timestamp', 'desc')
-                    .onSnapshot(snapshot => {
-                        const adviceItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                        if (adviceItems.length === 0) {
-                            listEl.innerHTML = '<p>No advice submitted.</p>';
-                            return;
-                        }
-                        
-                        listEl.innerHTML = adviceItems.map(item => {
-                            const sender = appState.allUsersCache.find(u => u.id === item.userId);
-                            const timestamp = item.timestamp.toDate();
-                            return `
-                                <div class="item-card">
-                                    <h3>${item.subject} (Status: ${item.status})</h3>
-                                    <div class="item-meta">
-                                        From: ${sender ? sender.name : 'Unknown'} on ${timestamp.toLocaleString()}
-                                    </div>
-                                    <p>${item.message}</p>
-                                    <div style="margin-top: 10px;">
-                                        <button class="btn btn-success btn-sm" data-action="mark-advice" data-id="${item.id}" data-status="Applied">Mark as Applied</button>
-                                        <button class="btn btn-warning btn-sm" data-action="mark-advice" data-id="${item.id}" data-status="Considered">Mark as Considered</button>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('');
-                    }, error => console.error("Error listening to advice inbox:", error));
-            }
-
-            async function renderCabinetManagement() {
-                const optionsEl = document.getElementById('cabinet-player-options');
-                if (!optionsEl) return;
-                
-                const eligible = appState.allUsersCache.filter(u => (u.role === 'Co-Leader' || u.role === 'Elder') && u.status === 'active');
-                
-                if (eligible.length === 0) {
-                    optionsEl.innerHTML = '<p>No Co-Leaders or Elders available to add to the cabinet.</p>';
-                    return;
-                }
-                
-                try {
-                    const metaDoc = await metaCollection.doc('main').get();
-                    const cabinetIds = metaDoc.data()?.cabinet || [];
-
-                    optionsEl.innerHTML = eligible.map(user => `
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="${user.id}" id="cab-${user.id}"
-                                ${cabinetIds.includes(user.id) ? 'checked' : ''}>
-                            <label class="form-check-label" for="cab-${user.id}">
-                                ${user.name} (${user.role})
-                            </label>
-                        </div>
-                    `).join('');
-                } catch (error) {
-                    console.error("Error rendering cabinet management:", error);
-                    optionsEl.innerHTML = '<p>Error loading cabinet options.</p>';
-                }
-            }
-            
-            // --- NEW: PDF/Image Management Renderers ---
-            function renderPdfManagementList() {
-                const listEl = document.getElementById('pdf-management-list');
-                if (!listEl) return;
-                
-                appState.listeners.pdfManagement = pdfRankingsCollection
-                    .orderBy('uploadedAt', 'desc')
-                    .onSnapshot(snapshot => {
-                        const pdfs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        if (pdfs.length === 0) {
-                            listEl.innerHTML = '<p>No PDFs uploaded.</p>';
-                            return;
-                        }
-                        listEl.innerHTML = pdfs.map(pdf => `
-                            <div class="management-list-item">
-                                <span>${pdf.title}</span>
-                                <button class="btn btn-danger btn-sm" data-action="delete-pdf" data-id="${pdf.id}" data-path="${pdf.storagePath}">Delete</button>
-                            </div>
-                        `).join('');
-                    }, error => console.error("Error listening to PDF management list:", error));
-            }
-            
-            function renderImageManagementList() {
-                const listEl = document.getElementById('image-management-list');
-                if (!listEl) return;
-                
-                appState.listeners.imageManagement = imageRankingsCollection
-                    .orderBy('uploadedAt', 'desc')
-                    .onSnapshot(snapshot => {
-                        const images = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        if (images.length === 0) {
-                            listEl.innerHTML = '<p>No images uploaded.</p>';
-                            return;
-                        }
-                        listEl.innerHTML = images.map(img => `
-                            <div class="management-list-item">
-                                <span>${img.title}</span>
-                                <button class="btn btn-danger btn-sm" data-action="delete-image" data-id="${img.id}" data-path="${img.storagePath}">Delete</button>
-                            </div>
-                        `).join('');
-                    }, error => console.error("Error listening to Image management list:", error));
-            }
-            // --- 10. DRAFTS & VOTING FUNCTIONS ---
-
-            async function updateAllDraftsStatus() {
-                const now = new Date();
-                
-                const draftsToUpdateQuery = draftsCollection
-                    .where('status', 'in', ['advice', 'voting']);
-                
-                try {
-                    const snapshot = await draftsToUpdateQuery.get();
-                    if (snapshot.empty) {
-                        return; 
-                    }
-
-                    const batch = db.batch();
-                    
-                    snapshot.docs.forEach(doc => {
-                        const draft = { id: doc.id, ...doc.data() };
-                        const draftRef = draftsCollection.doc(draft.id);
-
-                        const adviceEnds = draft.adviceEndsAt.toDate();
-                        const votingEnds = draft.votingEndsAt.toDate();
-
-                        if (draft.status === 'advice' && now > adviceEnds) {
-                            batch.update(draftRef, { status: 'voting' });
-                        }
-                        
-                        else if (draft.status === 'voting' && now > votingEnds) {
-                            const { newStatus, newSummary } = tallyVotes(draft); 
-                            batch.update(draftRef, { 
-                                status: newStatus, 
-                                resultSummary: newSummary 
-                            });
-                        }
-                    });
-
-                    await batch.commit();
-
-                } catch (error) {
-                    console.error("Error updating draft statuses:", error);
-                }
-            }
-            
-            function tallyVotes(draft) {
-                if (!draft || !['voting', 'advice'].includes(draft.status)) {
-                    return { newStatus: draft.status, newSummary: draft.resultSummary }; 
-                }
-
-                let yesVotes = 0;
-                let noVotes = 0;
-                let absentVotes = 0;
-                
-                const activeUsers = appState.allUsersCache.filter(u => u.status === 'active');
-                if (activeUsers.length === 0) {
-                    return { newStatus: 'canceled', newSummary: 'Draft Canceled: No active users found.' };
-                }
-
-                const totalPossibleWeightedVotes = activeUsers.reduce((acc, user) => acc + (user.role === 'Leader' ? 3 : 1), 0);
-                
-                (draft.votes || []).forEach(v => {
-                    if (v.vote === 'yes') yesVotes += v.weight;
-                    if (v.vote === 'no') noVotes += v.weight;
-                    if (v.vote === 'absent') absentVotes += v.weight;
                 });
-
-                const votedUserIds = (draft.votes || []).map(v => v.userId);
-                activeUsers.forEach(user => {
-                    if (!votedUserIds.includes(user.id)) {
-                        absentVotes += (user.role === 'Leader' ? 3 : 1);
-                    }
-                });
-
-                let newStatus = draft.status;
-                let newSummary = draft.resultSummary;
-
-                if (totalPossibleWeightedVotes === 0) {
-                     newStatus = 'canceled';
-                     newSummary = 'Draft Canceled: No voters eligible.';
-                }
-                else if (absentVotes / totalPossibleWeightedVotes >= (1/3)) {
-                    newStatus = 'canceled';
-                    newSummary = `Draft Canceled: ${((absentVotes / totalPossibleWeightedVotes) * 100).toFixed(1)}% of players were absent.`;
-                }
-                else if (yesVotes > (yesVotes + noVotes) / 2) {
-                    newStatus = 'passed_pending_activation';
-                    newSummary = `Draft Passed!\nYes: ${yesVotes}\nNo: ${noVotes}\nAbsent: ${absentVotes}`;
-                }
-                else {
-                    newStatus = 'failed';
-                    newSummary = `Draft Failed.\nYes: ${yesVotes}\nNo: ${noVotes}\nAbsent: ${absentVotes}`;
-                }
-                
-                return { newStatus, newSummary };
-            }
-
-            function renderDraftsVotingPage() {
-                updateAllDraftsStatus().then(() => {
-                    const listEl = document.getElementById('drafts-list');
-                    if (!listEl) return;
-                    
-                    appState.listeners.drafts = draftsCollection
-                        .orderBy('createdAt', 'desc')
-                        .onSnapshot(snapshot => {
-                            const drafts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                            if (drafts.length === 0) {
-                                listEl.innerHTML = '<p>No drafts are currently active.</p>';
-                                return;
-                            }
-                            
-                            listEl.innerHTML = drafts.map(draft => {
-                                let statusText = '';
-                                const adviceEnds = draft.adviceEndsAt?.toDate();
-                                const votingEnds = draft.votingEndsAt?.toDate();
-
-                                switch (draft.status) {
-                                    case 'advice': statusText = `Status: Advice Phase (ends ${adviceEnds?.toLocaleTimeString()})`; break;
-                                    case 'voting': statusText = `Status: Voting Phase (ends ${votingEnds?.toLocaleTimeString()})`; break;
-                                    case 'passed_pending_activation': statusText = 'Status: Passed, Awaiting Leader Activation'; break;
-                                    case 'active': statusText = 'Status: Activated as Law'; break;
-                                    case 'failed': statusText = 'Status: Failed'; break;
-                                    case 'canceled': statusText = 'Status: Canceled (High Abstention)'; break;
-                                    default: statusText = `Status: ${draft.status}`;
-                                }
-
-                                return `
-                                    <div class="item-card">
-                                        <h3>${draft.title}</h3>
-                                        <div class="item-meta">${statusText}</div>
-                                        <p>${(draft.description || "").substring(0, 150)}...</p>
-                                        <button class="btn btn-primary" data-action="show-draft-detail" data-id="${draft.id}">View Details & Vote</button>
-                                    </div>
-                                `;
-                            }).join('');
-                        }, error => console.error("Error listening to drafts:", error));
-                });
-            }
+            });
+        }
+        
+        function loadPinnedMessage(type) {
+            const suffix = (type === 'general') ? 'ga' : 'sa';
+            const contentEl = document.getElementById(`pinned-content-${suffix}`);
+            const unpinBtn = document.getElementById(`unpin-btn-${suffix}`);
+            const fieldContent = `pinnedMessage${suffix}_content`;
             
-            function renderDraftDetailPage(draftId) {
-                updateAllDraftsStatus().then(() => {
-                    appState.listeners.draftDetail = draftsCollection.doc(draftId)
-                        .onSnapshot(doc => {
-                            if (!doc.exists) {
-                                showPage('drafts-voting-page');
-                                return;
-                            }
-                            
-                            const draft = { id: doc.id, ...doc.data() };
-                            const isLoggedIn = !!appState.currentUser;
-                            
-                            document.getElementById('draft-detail-title').textContent = draft.title;
-                            document.getElementById('draft-detail-description').textContent = draft.description;
-
-                            const statusEl = document.getElementById('draft-detail-status');
-                            const timerEl = document.getElementById('draft-detail-timer');
-                            const adviceSection = document.getElementById('draft-advice-section');
-                            const votingSection = document.getElementById('draft-voting-section');
-                            const resultsSection = document.getElementById('draft-results-section');
-                            const activationSection = document.getElementById('draft-leader-activation-section');
-                            
-                            [adviceSection, votingSection, resultsSection, activationSection, timerEl].forEach(el => {
-                                if (el) el.style.display = 'none';
-                            });
-                            
-                            statusEl.className = 'draft-status-bar'; 
-                            const adviceEnds = draft.adviceEndsAt.toDate();
-                            const votingEnds = draft.votingEndsAt.toDate();
-
-                            if (draft.status === 'advice') {
-                                statusEl.textContent = 'Advice Phase';
-                                statusEl.classList.add('status-advice');
-                                timerEl.textContent = `Advice phase ends at: ${adviceEnds.toLocaleString()}`;
-                                timerEl.style.display = 'block';
-                                adviceSection.style.display = 'block'; // Show section
-                                
-                                const adviceListEl = document.getElementById('draft-advice-list');
-                                if (draft.advice.length === 0) {
-                                    adviceListEl.innerHTML = '<p>No advice submitted yet.</p>';
-                                } else {
-                                    adviceListEl.innerHTML = (draft.advice || []).map(a => {
-                                        const user = appState.allUsersCache.find(u => u.id === a.userId);
-                                        const timestamp = a.timestamp.toDate();
-                                        return `
-                                            <div class="advice-item">
-                                                <p>${a.text}</p>
-                                                <small class="advice-sender">by ${user ? user.name : 'Unknown'} on ${timestamp.toLocaleString()}</small>
-                                            </div>
-                                        `;
-                                    }).join('');
-                                }
-                            } 
-                            else if (draft.status === 'voting') {
-                                statusEl.textContent = 'Voting Phase';
-                                statusEl.classList.add('status-voting');
-                                timerEl.textContent = `Voting ends at: ${votingEnds.toLocaleString()}`;
-                                timerEl.style.display = 'block';
-                                votingSection.style.display = 'block'; // Show section
-                                
-                                // Restore default HTML
-                                votingSection.innerHTML = `
-                                    <h3>Cast Your Vote</h3>
-                                    <div id="draft-vote-error" class="alert alert-danger" style="display: none;"></div>
-                                    <div class="vote-options">
-                                        <button class="btn btn-success" data-action="draft-vote" data-vote="yes">✅ Yes</button>
-                                        <button class="btn btn-danger" data-action="draft-vote" data-vote="no">❌ No</button>
-                                        <button class="btn btn-secondary" data-action="draft-vote" data-vote="absent">⚪ Absent</button>
-                                    </div>
-                                    <div id="draft-vote-login-prompt" class="action-login-prompt static" style="display: none;">
-                                        <h3>Login Required</h3>
-                                        <p>You must login to vote on this draft.</p>
-                                        <button class="btn btn-primary" data-action="show-login">Login to Vote</button>
-                                    </div>
-                                `;
-
-                                if (isLoggedIn) {
-                                    const userVote = (draft.votes || []).find(v => v.userId === appState.currentUser.id);
-                                    if (userVote) {
-                                        // User has voted, replace HTML
-                                        votingSection.innerHTML = `<h3>Cast Your Vote</h3><div class="alert alert-success">You have voted: <strong>${userVote.vote.toUpperCase()}</strong></div>`;
-                                    }
-                                }
-                                // Let checkLoginForPage (from Part 4) handle showing/hiding the form/prompt
-                                checkLoginForPage('draft-detail-page');
-                            }
-                            else { 
-                                resultsSection.style.display = 'block';
-                                document.getElementById('draft-vote-summary').textContent = draft.resultSummary || 'Results are being tallied.';
-                                
-                                if (draft.status === 'passed_pending_activation') {
-                                    statusEl.textContent = 'Passed - Awaiting Activation';
-                                    statusEl.classList.add('status-passed');
-                                    if (isLoggedIn && appState.currentUser.role === 'Leader') {
-                                        activationSection.style.display = 'block';
-                                        document.getElementById('draft-activate-btn').dataset.id = draft.id;
-                                    }
-                                } else if (draft.status === 'failed') {
-                                    statusEl.textContent = 'Failed';
-                                    statusEl.classList.add('status-failed');
-                                } else if (draft.status === 'canceled') {
-                                    statusEl.textContent = 'Canceled (High Abstention)';
-                                    statusEl.classList.add('status-canceled');
-                                } else if (draft.status === 'active') {
-                                    statusEl.textContent = 'Activated as Law';
-                                    statusEl.classList.add('status-active');
-                                }
-                            }
-
-                        }, error => console.error("Error listening to draft detail:", error));
-                });
-            }
+            appState.listeners.pinnedMsg = db.collection('meta').doc('main').onSnapshot(doc => {
+                const data = doc.data() || {};
+                contentEl.textContent = data[fieldContent] || 'No message pinned.';
+                
+                if (appState.currentUser && appState.currentUser.role === 'Leader') {
+                    unpinBtn.classList.remove('hidden');
+                }
+            });
+        }
+        
+        // Listener for pin/unpin buttons
+        document.body.addEventListener('click', (e) => {
+            const action = e.target.dataset.action;
+            if (!action) return;
             
-            // --- 11. AUTHENTICATION & REGISTRATION HANDLERS ---
-            
-            async function handleLogin(e) {
-                e.preventDefault();
-                const id = document.getElementById('login-id').value;
-                const password = document.getElementById('login-password').value;
-                const errorEl = document.getElementById('login-error');
-                
-                try {
-                    const userDoc = await usersCollection.doc(id).get();
-
-                    if (userDoc.exists) {
-                        const user = userDoc.data();
-                        if (user.password === password) {
-                            if (user.status !== 'active') {
-                                errorEl.textContent = `Your account is currently ${user.status}. Please contact the Leader.`;
-                                errorEl.style.display = 'block';
-                                return;
-                            }
-                            
-                            appState.currentUser = user;
-                            sessionStorage.setItem('clanPortalUser', JSON.stringify(user)); 
-                            await cacheAllUsers(); 
-                            
-                            // REMOVED: setupPresence(user.id);
-                            // REMOVED: listenToAllStatuses();
-                            
-                            updateHeader();
-                            showPage('home-page');
-                            errorEl.style.display = 'none';
-                            document.getElementById('login-form').reset();
-                        } else {
-                            errorEl.textContent = 'Invalid Player ID or Password.';
-                            errorEl.style.display = 'block';
-                        }
-                    } else {
-                        errorEl.textContent = 'Invalid Player ID or Password.';
-                        errorEl.style.display = 'block';
-                    }
-                } catch (error) {
-                    console.error("Error logging in:", error);
-                    errorEl.textContent = 'An error occurred. Please try again.';
-                    errorEl.style.display = 'block';
-                }
-            }
-            
-            function handleLogout() {
-                // REMOVED: goOffline(appState.currentUser.id);
-                appState.currentUser = null;
-                sessionStorage.removeItem('clanPortalUser');
-                detachAllListeners(); 
-                // REMOVED: statusRef.off();
-                // REMOVED: appState.userStatuses = {};
-                appState.allUsersCache = []; 
-                updateHeader();
-                showPage('home-page'); // MODIFIED: Go to home page
-            }
-
-            async function handleRegister(e) {
-                e.preventDefault();
-                console.log('Registration attempt started...');
-                
-                const playerId = document.getElementById('reg-player-id').value;
-                
-                try {
-                    const userDoc = await usersCollection.doc(playerId).get();
-                    if (userDoc.exists) {
-                        alert('Error: This Player ID is already taken. Please choose another one.');
-                        return;
-                    }
-                    
-                    const country = document.getElementById('reg-country').value;
-                    let state = '';
-                    if (country === 'India') {
-                        state = document.getElementById('reg-india-state').value;
-                    } else {
-                        state = document.getElementById('reg-other-region').value;
-                    }
-                    
-                    const primaryLang = document.getElementById('reg-lang-primary').value; 
-                    const secondaryLangsEl = document.getElementById('reg-lang-secondary');
-                    const secondaryLangs = [...secondaryLangsEl.selectedOptions].map(option => option.value);
-                    
-                    if (secondaryLangs.length === 0) {
-                         alert('Error: Please select at least one secondary language.');
-                         return;
-                    }
-                    const allLanguages = [primaryLang, ...secondaryLangs].join(', ');
-
-                    const newPassword = Math.floor(10000 + Math.random() * 90000).toString();
-                    
-                    const newUser = {
-                        id: playerId,
-                        name: document.getElementById('reg-player-name').value,
-                        clanName: document.getElementById('reg-clan-name').value,
-                        clanId: document.getElementById('reg-clan-id').value,
-                        dob: document.getElementById('reg-dob').value,
-                        country: country,
-                        state: state,
-                        languages: allLanguages,
-                        password: newPassword,
-                        role: document.getElementById('reg-role').value, 
-                        status: 'active',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp() 
-                    };
-
-                    await usersCollection.doc(newUser.id).set(newUser);
-                    
-                    const newRegData = {
-                        id: newUser.id,
-                        name: newUser.name,
-                        password: newUser.password,
-                        country: newUser.country,
-                        state: newUser.state,
-                        role: newUser.role,
-                        languages: newUser.languages
-                    };
-
-                    await metaCollection.doc('main').update({
-                        newRegistrations: firebase.firestore.FieldValue.arrayUnion(newRegData)
-                    });
-                    
-                    console.log('Registration successful for user:', newUser.id);
-
-                    alert(
-                        'Registration Successful!\n\n' +
-                        'Your account has been created and is now active.\n' +
-                        'Your login details are:\n\n' +
-                        `Player ID: ${newUser.id}\n` +
-                        `Password: ${newUser.password}\n\n` +
-                        'Please save this password. It is also visible to the Clan Leader.'
-                    );
-                    
-                    document.getElementById('register-form').reset();
-                    showPage('login-page');
-
-                } catch (error) {
-                    console.error('Registration failed:', error);
-                    alert('An unexpected error occurred during registration. Please try again.');
-                }
-            }
-            
-            async function acknowledgeRegistration(userId) {
-                try {
-                    const metaDoc = await metaCollection.doc('main').get();
-                    if (!metaDoc.exists) return;
-                    const newRegistrations = metaDoc.data()?.newRegistrations || [];
-                    
-                    const updatedRegistrations = newRegistrations.filter(reg => reg.id !== userId);
-
-                    await metaCollection.doc('main').update({
-                        newRegistrations: updatedRegistrations
-                    });
-
-                } catch (error) {
-                    console.error("Error acknowledging registration:", error);
-                }
-            }
-            
-            // --- 12. ACTION HANDLERS (Forms, Submissions, etc.) ---
-            
-            async function handleChatMessagePost(e, pagePrefix) {
-                e.preventDefault();
-                
-                if (!appState.currentUser) {
-                    showPage('login-page');
-                    return;
-                }
-                
-                const input = document.getElementById(`${pagePrefix}-chat-input`);
-                const text = input.value.trim();
-                const file = appState.fileToUpload[pagePrefix];
-                
-                if (!text && !file) return; 
-
-                const user = appState.currentUser;
-                
-                if (pagePrefix === 'sa' && !['Leader', 'Co-Leader'].includes(user.role)) {
-                    document.getElementById('sa-post-error').style.display = 'block';
-                    return;
-                }
-                document.getElementById('sa-post-error').style.display = 'none';
-
-                let color = '#333333'; 
-                let font = "'Poppins', sans-serif"; 
-
-                if (user.role === 'Leader') {
-                    color = document.getElementById(`${pagePrefix}-color-picker`).value;
-                    font = document.getElementById(`${pagePrefix}-font-select`).value;
-                } else if (user.role === 'Co-Leader' || user.role === 'Member' || user.role === 'Elder') {
-                    const colorSelect = document.getElementById(`${pagePrefix}-color-select`);
-                    if (colorSelect) {
-                        color = colorSelect.value;
-                    }
-                }
-
-                const message = {
-                    userId: appState.currentUser.id,
-                    text: text,
-                    color: color,
-                    font: font,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    type: 'text',
-                    url: null,
-                };
-                
-                input.value = '';
-                appState.fileToUpload[pagePrefix] = null;
-                document.getElementById(`${pagePrefix}-file-input`).value = null;
-                input.placeholder = 'Type your message...';
-
-
-                try {
-                    if (file) {
-                        const fileType = file.type.split('/')[0]; 
-                        const filePath = `chat/${pagePrefix}/${Date.now()}_${file.name}`;
-                        const fileRef = storage.ref(filePath);
-                        
-                        input.placeholder = 'Uploading file...';
-                        
-                        const uploadTask = fileRef.put(file);
-                        
-                        uploadTask.on('state_changed', 
-                            (snapshot) => {
-                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                                input.placeholder = `Uploading... ${Math.round(progress)}%`;
-                            }, 
-                            (error) => {
-                                console.error("Upload failed:", error);
-                                alert("File upload failed.");
-                                input.placeholder = 'Type your message...';
-                            }, 
-                            async () => {
-                                const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
-                                message.url = downloadURL;
-                                if (fileType === 'image') message.type = 'image';
-                                else if (fileType === 'video') message.type = 'video';
-                                else message.type = 'file';
-                                
-                                await addMessageToDb(pagePrefix, message);
-                                input.placeholder = 'Type your message...';
-                            }
-                        );
-                    } else {
-                        await addMessageToDb(pagePrefix, message);
-                    }
-                } catch (error) {
-                    console.error("Error sending message:", error);
-                }
-            }
-
-            async function addMessageToDb(pagePrefix, message) {
-                try {
-                    const chatDocRef = messagesCollection.doc(pagePrefix === 'ga' ? 'general' : 'special');
-                    await chatDocRef.collection('chats').add(message);
-                } catch (error) {
-                    console.error("Error adding message to DB:", error);
-                }
-            }
-
-            async function handleNoticePost(e) {
-                e.preventDefault();
-                if (!appState.currentUser) return; 
-                
-                const title = document.getElementById('notice-title').value;
-                const content = document.getElementById('notice-content').value;
-
-                try {
-                    await noticesCollection.add({
-                        userId: appState.currentUser.id,
-                        title: title,
-                        content: content,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    
-                    document.getElementById('new-notice-form').reset();
-                } catch (error) {
-                    console.error("Error posting notice:", error);
-                }
-            }
-            
-            async function handleLeaderChatSubmit(e) {
-                e.preventDefault();
-                if (!appState.currentUser) return; 
-                
-                const subject = document.getElementById('leader-chat-subject').value;
-                const message = document.getElementById('leader-chat-message').value;
-
-                try {
-                    const newDMRef = dmsCollection.doc();
-                    await newDMRef.set({
-                        id: newDMRef.id, 
-                        threadId: newDMRef.id, 
-                        userId: appState.currentUser.id,
-                        subject: subject,
-                        message: message,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        isReply: false
-                    });
-                    
-                    alert('Your private message has been sent to the Leader.');
-                    document.getElementById('leader-chat-form').reset();
-                    showPage('home-page');
-                } catch (error) {
-                    console.error("Error sending DM:", error);
-                }
-            }
-            
-            async function handleQuarryReply(dmId) {
-                const message = document.getElementById(`reply-dm-${dmId}`).value;
-                if (!message || !appState.currentUser) return; 
-                
-                try {
-                    const originalDM = await dmsCollection.doc(dmId).get();
-                    if (!originalDM.exists) {
-                        alert("Error: Could not find original message.");
-                        return;
-                    }
-                    const threadId = originalDM.data().threadId;
-
-                    await dmsCollection.add({
-                        threadId: threadId, 
-                        userId: appState.currentUser.id, 
-                        subject: `Re: ${originalDM.data().subject}`,
-                        message: message,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        isReply: true
-                    });
-                    
-                } catch (error) {
-                    console.error("Error replying to DM:", error);
-                }
-            }
-
-            async function handleAdvisorySubmit(e) {
-                e.preventDefault();
-                if (!appState.currentUser) return; 
-                
-                const subject = document.getElementById('advisory-subject').value;
-                const message = document.getElementById('advisory-message').value;
-
-                try {
-                    await adviceCollection.add({
-                        userId: appState.currentUser.id,
-                        subject: subject,
-                        message: message,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        status: 'Submitted'
-                    });
-                    
-                    alert('Your advice has been sent to the Leader.');
-                    document.getElementById('advisory-form').reset();
-                    showPage('home-page');
-                } catch (error) {
-                    console.error("Error submitting advice:", error);
-                }
-            }
-            
-            async function markAdvice(adviceId, status) {
-                try {
-                    await adviceCollection.doc(adviceId).update({
-                        status: status
-                    });
-                } catch (error) {
-                    console.error("Error marking advice:", error);
-                }
-            }
-
-            async function handleCreateDraft(e) {
-                e.preventDefault();
-                const title = document.getElementById('draft-title').value;
-                const description = document.getElementById('draft-description').value;
-                
-                const now = new Date(); 
-                const fiveHours = 5 * 60 * 60 * 1000;
-                const eightHours = 8 * 60 * 60 * 1000;
-                
-                const adviceEnds = new Date(now.getTime() + fiveHours);
-                const votingEnds = new Date(now.getTime() + fiveHours + eightHours);
-                
-                try {
-                    await draftsCollection.add({
-                        title: title,
-                        description: description,
-                        status: 'advice',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        adviceEndsAt: adviceEnds, 
-                        votingEndsAt: votingEnds,
-                        advice: [],
-                        votes: [],
-                        resultSummary: ''
-                    });
-                    
-                    alert('Draft published! The 5-hour advice phase has begun.');
-                    document.getElementById('create-draft-form').reset();
-                    showPage('drafts-voting-page');
-                } catch (error) {
-                    console.error("Error creating draft:", error);
-                    alert('Error creating draft.');
-                }
-            }
-            
-            async function handleDraftAdvice(e) {
-                e.preventDefault();
-                if (!appState.currentUser) return; 
-                
-                const text = document.getElementById('draft-advice-input').value;
-                if (!text) return;
-                
-                const newAdvice = {
-                    userId: appState.currentUser.id,
-                    text: text,
-                    timestamp: new Date() 
-                };
-                
-                try {
-                    await draftsCollection.doc(appState.currentDraftId).update({
-                        advice: firebase.firestore.FieldValue.arrayUnion(newAdvice)
-                    });
-                    
-                    document.getElementById('draft-advice-form').reset();
-                } catch (error) {
-                    console.error("Error submitting draft advice:", error);
-                }
-            }
-
-            async function handleDraftVote(draftId, vote) {
-                if (!appState.currentUser) return; 
-                const draftRef = draftsCollection.doc(draftId);
-
-                try {
-                    const doc = await draftRef.get();
-                    if (!doc.exists) return;
-                    const draft = doc.data();
-
-                    if ((draft.votes || []).some(v => v.userId === appState.currentUser.id)) {
-                        document.getElementById('draft-vote-error').textContent = 'You have already voted on this draft.';
-                        document.getElementById('draft-vote-error').style.display = 'block';
-                        return;
-                    }
-                    
-                    const newVote = {
-                        userId: appState.currentUser.id,
-                        vote: vote,
-                        weight: appState.currentUser.role === 'Leader' ? 3 : 1,
-                        timestamp: new Date()
-                    };
-
-                    await draftRef.update({
-                        votes: firebase.firestore.FieldValue.arrayUnion(newVote)
-                    });
-                    
-                } catch (error) {
-                    console.error("Error casting vote:", error);
-                }
-            }
-            
-            async function handleActivateLaw(draftId) {
-                if (!appState.currentUser) return; 
-                const draftRef = draftsCollection.doc(draftId);
-                
-                try {
-                    const draftDoc = await draftRef.get();
-                    if (!draftDoc.exists) return;
-                    const draft = draftDoc.data();
-                    
-                    if (draft.status !== 'passed_pending_activation') return;
-
-                    await draftRef.update({ status: 'active' });
-
-                    await rulesCollection.add({
-                        title: draft.title,
-                        description: draft.description,
-                        activatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    
-                    await noticesCollection.add({
-                        userId: appState.currentUser.id, 
-                        title: `New Rule Activated: ${draft.title}`,
-                        content: `The draft "${draft.title}" has been passed and is now an official clan rule.\n\n${draft.description}`,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    
-                    alert('Law has been activated and added to the Rules of Clan. A notice has been posted.');
-                } catch (error) {
-                    console.error("Error activating law:", error);
-                }
-            }
-            
-            async function handleRemoveRule(ruleId) {
-                if (!confirm('Are you sure you want to permanently delete this rule? This action does not require a vote and is final.')) {
-                    return;
-                }
-                
-                try {
-                    await rulesCollection.doc(ruleId).delete();
-                } catch (error) {
-                    console.error("Error removing rule:", error);
-                }
-            }
-            
-            async function handlePlayerAction(userId, task, value = null) {
-                const userRef = usersCollection.doc(userId);
-                
-                try {
-                    const userDoc = await userRef.get();
-                    if (!userDoc.exists) return;
-                    const user = userDoc.data();
-                    if (user.role === 'Leader') return;
-
-                    switch (task) {
-                        case 'role':
-                            await userRef.update({ role: value });
-                            alert(`User ${user.name} role changed to ${value}.`);
-                            break;
-                        case 'suspend':
-                            if (confirm(`Are you sure you want to suspend ${user.name}? This is temporary.`)) {
-                                await userRef.update({ status: 'suspended' });
-                            }
-                            break;
-                        case 'ban':
-                            if (confirm(`Are you sure you want to ban ${user.name}? This is permanent.`)) {
-                                await userRef.update({ status: 'banned' });
-                            }
-                            break;
-                        case 'delete':
-                            if (confirm(`Are you sure you want to PERMANENTLY DELETE ${user.name}? This action cannot be undone.`)) {
-                                await userRef.delete();
-                                // REMOVED: RTDB presence deletion
-                                await metaCollection.doc('main').update({
-                                    cabinet: firebase.firestore.FieldValue.arrayRemove(userId)
-                                });
-                            }
-                            break;
-                        case 'reactivate':
-                            await userRef.update({ status: 'active' });
-                            break;
-                    }
-                    
-                    renderPlayersActions(); 
-
-                } catch (error) {
-                    console.error("Error performing player action:", error);
-                }
-            }
-            
-            async function handleCabinetSave(e) {
-                e.preventDefault();
-                const selected = [];
-                document.querySelectorAll('#cabinet-player-options input[type="checkbox"]:checked').forEach(input => {
-                    selected.push(input.value);
-                });
-                
-                if (selected.length > 5) {
-                    alert('Error: You can select a maximum of 5 cabinet players.');
-                    return;
-                }
-                
-                try {
-                    await metaCollection.doc('main').set({ 
-                        cabinet: selected
-                    }, { merge: true }); 
-                    
-                    alert('Cabinet players updated.');
-                    showPage('leader-dashboard-page');
-                } catch (error)
- {
-                    console.error("Error saving cabinet:", error);
-                }
-            }
-            
-            async function handlePinMessage(messageId, room) {
-                if (!appState.currentUser || appState.currentUser.role !== 'Leader') return;
-                
-                const fieldToUpdate = (room === 'ga') ? 'pinnedMessageGA' : 'pinnedMessageSA';
-                
-                try {
-                    await metaCollection.doc('main').update({
-                        [fieldToUpdate]: messageId 
-                    });
-                } catch (error) {
-                    console.error("Error pinning message:", error);
-                }
-            }
-            
-            async function handleDeleteMessage(messageId, room) {
-                if (!appState.currentUser || appState.currentUser.role !== 'Leader') return;
-                
-                if (!confirm('Are you sure you want to delete this message forever?')) return;
-                
-                const roomName = (room === 'ga' ? 'general' : 'special');
-                const msgRef = messagesCollection.doc(roomName).collection('chats').doc(messageId);
-
-                try {
-                    const msgDoc = await msgRef.get();
-                    if(msgDoc.exists && msgDoc.data().url) {
-                        const fileRef = storage.refFromURL(msgDoc.data().url);
-                        await fileRef.delete();
-                    }
-                    
-                    await msgRef.delete();
-                    
-                } catch (error) {
-                    console.error("Error deleting message (and file):", error);
-                }
-            }
-            
-            async function handleExportData() {
-                if (!appState.currentUser || appState.currentUser.role !== 'Leader') return;
-
-                try {
-                    const allData = {
-                        exportedAt: new Date().toISOString(),
-                        users: appState.allUsersCache
-                    };
-                    
-                    const dataStr = JSON.stringify(allData, null, 2);
-                    const blob = new Blob([dataStr], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `clan_portal_export_${Date.now()}.json`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    
-                } catch (error) {
-                    console.error("Error exporting data:", error);
-                    alert("Error exporting data.");
-                }
-            }
-            
-            // --- NEW: PDF/Image Upload Handlers ---
-            
-            async function handlePdfUpload(e) {
-                e.preventDefault();
-                const title = document.getElementById('pdf-title').value;
-                const description = document.getElementById('pdf-description').value;
-                const file = document.getElementById('pdf-file-input').files[0];
-                
-                if (!file || !title) {
-                    alert('Please provide a title and a PDF file.');
-                    return;
-                }
-                
-                const storagePath = `rankings/pdf/${Date.now()}_${file.name}`;
-                const fileRef = storage.ref(storagePath);
-                
-                try {
-                    const uploadTask = await fileRef.put(file);
-                    const downloadURL = await uploadTask.ref.getDownloadURL();
-                    
-                    await pdfRankingsCollection.add({
-                        title: title,
-                        description: description,
-                        url: downloadURL,
-                        storagePath: storagePath,
-                        uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    
-                    alert('PDF uploaded successfully!');
-                    document.getElementById('upload-pdf-form').reset();
-                } catch (error) {
-                    console.error("Error uploading PDF:", error);
-                    alert("Error uploading PDF.");
-                }
-            }
-            
-            async function handleImageUpload(e) {
-                e.preventDefault();
-                const title = document.getElementById('image-title').value;
-                const file = document.getElementById('image-file-input').files[0];
-                
-                if (!file || !title) {
-                    alert('Please provide a title and an image file.');
-                    return;
-                }
-                
-                const storagePath = `rankings/image/${Date.now()}_${file.name}`;
-                const fileRef = storage.ref(storagePath);
-                
-                try {
-                    const uploadTask = await fileRef.put(file);
-                    const downloadURL = await uploadTask.ref.getDownloadURL();
-                    
-                    await imageRankingsCollection.add({
-                        title: title,
-                        url: downloadURL,
-                        storagePath: storagePath,
-                        uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    
-                    alert('Image uploaded successfully!');
-                    document.getElementById('upload-image-form').reset();
-                } catch (error) {
-                    console.error("Error uploading image:", error);
-                    alert("Error uploading image.");
-                }
-            }
-            
-            async function handleDeletePdf(docId, storagePath) {
-                if (!confirm('Are you sure you want to delete this PDF?')) return;
-                
-                try {
-                    // Delete from Storage
-                    await storage.ref(storagePath).delete();
-                    // Delete from Firestore
-                    await pdfRankingsCollection.doc(docId).delete();
-                } catch (error) {
-                    console.error("Error deleting PDF:", error);
-                    alert("Error deleting PDF. It might have already been deleted.");
-                }
-            }
-            
-            async function handleDeleteImage(docId, storagePath) {
-                if (!confirm('Are you sure you want to delete this image?')) return;
-                
-                try {
-                    // Delete from Storage
-                    await storage.ref(storagePath).delete();
-                    // Delete from Firestore
-                    await imageRankingsCollection.doc(docId).delete();
-                } catch (error) {
-                    console.error("Error deleting image:", error);
-                    alert("Error deleting image. It might have already been deleted.");
-                }
-            }
-
-
-            // --- 13. Start the App ---
-            initApp();
+            if (action === 'unpin-message') handlePinActions(e.target.dataset.chat, null);
+            if (action === 'pin-message') handlePinActions(e.target.dataset.chat, e.target.dataset.msgId);
+            if (action === 'delete-message') handleDeleteMessage(e.target.dataset.chat, e.target.dataset.msgId);
         });
+
+        async function handlePinActions(chatType, msgId) {
+            if (!appState.currentUser || appState.currentUser.role !== 'Leader') return;
+            const suffix = (chatType === 'general') ? 'ga' : 'sa';
+            let content = null;
+            
+            if (msgId) {
+                // Pinning: Fetch message content
+                const msgDoc = await db.collection('messages').doc(chatType).collection('chats').doc(msgId).get();
+                const msgData = msgDoc.data();
+                content = `${msgData.text.substring(0, 50)}... (by ${msgData.userName})`;
+            }
+            
+            // Update meta doc (pin or unpin)
+            try {
+                await db.collection('meta').doc('main').update({
+                    [`pinnedMessage${suffix}_id`]: msgId,
+                    [`pinnedMessage${suffix}_content`]: content
+                });
+            } catch (error) { console.error('Error pinning/unpinning:', error); }
+        }
+        
+        async function handleDeleteMessage(chatType, msgId) {
+            if (!appState.currentUser || appState.currentUser.role !== 'Leader') return;
+            if (!confirm('Are you sure you want to delete this message permanently?')) return;
+            
+            const msgRef = db.collection('messages').doc(chatType).collection('chats').doc(msgId);
+            try {
+                const msgDoc = await msgRef.get();
+                const msgData = msgDoc.data();
+                
+                // If message has a file, delete from Storage first
+                if (msgData.storagePath) {
+                    await storage.ref(msgData.storagePath).delete();
+                }
+                // Delete message from Firestore
+                await msgRef.delete();
+            } catch (error) {
+                console.error('Error deleting message:', error);
+                alert('Could not delete message. The file might already be deleted.');
+                // Still try to delete doc if file deletion failed
+                await msgRef.delete().catch(e => console.error("Failed to delete doc:", e));
+            }
+        }
+        
+        function createMessageElement(msg, chatType) {
+            const div = document.createElement('div');
+            div.classList.add('chat-message');
+            
+            const isSelf = appState.currentUser && msg.userId === appState.currentUser.id;
+            div.classList.add(isSelf ? 'self' : 'other');
+            
+            if (msg.userRole === 'Leader') div.classList.add('message-leader');
+            if (msg.userRole === 'Co-Leader') div.classList.add('message-coleader');
+            
+            let senderName = msg.userName;
+            if (msg.userRole === 'Leader') senderName += ' 👑';
+            if (msg.userRole === 'Co-Leader') senderName += ' ⭐';
+
+            let mediaHTML = '';
+            if (msg.type === 'image') {
+                mediaHTML = `<a href="${msg.url}" target="_blank"><img src="${msg.url}" class="message-media" alt="Uploaded image" loading="lazy"></a>`;
+            } else if (msg.type === 'video') {
+                mediaHTML = `<video src="${msg.url}" class="message-media" controls></video>`;
+            }
+            
+            // Apply styles
+            const styles = msg.style || { color: '#0b0b0b', font: 'Poppins' };
+            const textContent = msg.text ? msg.text.replace(/\n/g, '<br>') : '';
+            
+            // Leader actions
+            const leaderActions = (appState.currentUser && appState.currentUser.role === 'Leader') ? `
+                <div class="message-actions">
+                    <button data-action="pin-message" data-chat="${chatType}" data-msg-id="${msg.id}">Pin</button>
+                    <button data-action="delete-message" data-chat="${chatType}" data-msg-id="${msg.id}">Delete</button>
+                </div>
+            ` : '';
+
+            div.innerHTML = `
+                ${leaderActions}
+                ${!isSelf ? `<span class="message-sender">${senderName}</span>` : ''}
+                ${mediaHTML}
+                <p class="msg-content" style="color: ${styles.color}; font-family: '${styles.font}', sans-serif;">${textContent}</p>
+                <span class="msg-timestamp">${msg.createdAt ? msg.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...'}</span>
+            `;
+            return div;
+        }
+        
+        function playNotificationSound() {
+            notificationSound.currentTime = 0;
+            notificationSound.play().catch(e => console.log("Audio play blocked by browser."));
+        }
+        
+        // -- Rules Page --
+        function loadRules() {
+            const list = document.getElementById('rules-list');
+            appState.listeners.rules = db.collection('rules').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+                if (snapshot.empty) { list.innerHTML = '<p>No rules activated.</p>'; return; }
+                list.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const rule = doc.data();
+                    const ruleCard = document.createElement('div');
+                    ruleCard.className = 'card';
+                    ruleCard.innerHTML = `
+                        <h3>${rule.title}</h3>
+                        <pre>${rule.description}</pre>
+                        ${(appState.currentUser && appState.currentUser.role === 'Leader') ? `<button class="btn btn-danger btn-sm" data-id="${doc.id}">Delete</button>` : ''}
+                    `;
+                    if (appState.currentUser && appState.currentUser.role === 'Leader') {
+                        ruleCard.querySelector('.btn-danger').addEventListener('click', async (e) => {
+                            if (confirm('Delete this rule?')) {
+                                await db.collection('rules').doc(e.target.dataset.id).delete();
+                            }
+                        });
+                    }
+                    list.appendChild(ruleCard);
+                });
+            }, (error) => list.innerHTML = '<p>Error loading rules.</p>');
+        }
+
+        // -- Notice Board --
+        function loadNoticeBoard() {
+            const list = document.getElementById('notice-list');
+            const formContainer = document.getElementById('new-notice-form-container');
+            if (appState.currentUser) {
+                appState.listeners.noticeMeta = db.collection('meta').doc('main').onSnapshot(doc => {
+                    const cabinet = doc.data()?.cabinet || [];
+                    if (cabinet.includes(appState.currentUser.id)) {
+                        formContainer.classList.remove('hidden');
+                    } else {
+                        formContainer.classList.add('hidden');
+                    }
+                });
+            } else {
+                formContainer.classList.add('hidden');
+            }
+            appState.listeners.notices = db.collection('notices').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+                if (snapshot.empty) { list.innerHTML = '<p>No notices posted.</p>'; return; }
+                list.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const notice = doc.data();
+                    const noticeCard = document.createElement('div');
+                    noticeCard.className = 'card';
+                    noticeCard.innerHTML = `
+                        <h3>${notice.title}</h3>
+                        <p>${notice.content.replace(/\n/g, '<br>')}</p>
+                        <hr style="border-color: #eee; margin: 1rem 0;">
+                        <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: 0;">
+                            Posted by: ${notice.authorName} on ${notice.createdAt.toDate().toLocaleDateString()}
+                        </p>
+                    `;
+                    list.appendChild(noticeCard);
+                });
+            }, (error) => list.innerHTML = '<p>Error loading notices.</p>');
+        }
+        
+        document.getElementById('new-notice-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!appState.currentUser) return;
+            try {
+                await db.collection('notices').add({
+                    title: document.getElementById('notice-title').value,
+                    content: document.getElementById('notice-content').value,
+                    authorName: appState.currentUser.name,
+                    authorId: appState.currentUser.id,
+                    createdAt: FieldValue.serverTimestamp()
+                });
+                e.target.reset();
+            } catch (error) { alert("Could not post notice."); }
+        });
+
+        // -- Public Rankings --
+        function loadPdfRankings() {
+            const list = document.getElementById('pdf-rankings-list');
+            appState.listeners.pdfRankings = db.collection('pdfRankings').orderBy('uploadedAt', 'desc').onSnapshot(snapshot => {
+                if (snapshot.empty) { list.innerHTML = '<p>No PDF rankings uploaded.</p>'; return; }
+                list.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const pdf = doc.data();
+                    list.innerHTML += `
+                        <div class="ranking-item-pdf">
+                            <div class="info"><h4>${pdf.title}</h4><p>${pdf.description}</p></div>
+                            <a href="${pdf.url}" target="_blank" class="btn btn-primary">Download</a>
+                        </div>`;
+                });
+            }, (error) => list.innerHTML = '<p>Error loading rankings.</p>');
+        }
+        function loadImageRankings() {
+            const grid = document.getElementById('image-rankings-list');
+            appState.listeners.imageRankings = db.collection('imageRankings').orderBy('uploadedAt', 'desc').onSnapshot(snapshot => {
+                if (snapshot.empty) { grid.innerHTML = '<p>No image rankings uploaded.</p>'; return; }
+                grid.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const img = doc.data();
+                    grid.innerHTML += `
+                        <div class="ranking-card-image">
+                            <a href="${img.url}" target="_blank"><img src="${img.url}" alt="${img.title}" loading="lazy"></a>
+                            <h4>${img.title}</h4>
+                        </div>`;
+                });
+            }, (error) => grid.innerHTML = '<p>Error loading rankings.</p>');
+        }
+
+        // =================================================================
+        // 7. VOTING & RULES SYSTEM (ROBUST)
+        // =================================================================
+        
+        async function loadDraftsList() {
+            const container = document.getElementById('drafts-list-container');
+            container.innerHTML = '<p>Loading drafts...</p>';
+            
+            try {
+                const snapshot = await db.collection('drafts').orderBy('createdAt', 'desc').get();
+                if (snapshot.empty) { container.innerHTML = '<p>No drafts found.</p>'; return; }
+
+                const now = new Date();
+                const updates = []; 
+                const drafts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                for (const draft of drafts) {
+                    // 1. Check advice phase end
+                    if (draft.status === 'advice' && draft.adviceEndsAt && now > draft.adviceEndsAt.toDate()) {
+                        draft.status = 'voting'; 
+                        updates.push(db.collection('drafts').doc(draft.id).update({ status: 'voting' }));
+                    }
+                    // 2. Check voting phase end
+                    if (draft.status === 'voting' && draft.votingEndsAt && now > draft.votingEndsAt.toDate()) {
+                        // Tallying requires login to get user list
+                        if (appState.currentUser) {
+                            const result = await tallyVotes(draft);
+                            draft.status = result.newStatus;
+                            draft.resultSummary = result.summary;
+                            updates.push(db.collection('drafts').doc(draft.id).update({
+                                status: result.newStatus,
+                                resultSummary: result.summary
+                            }));
+                        } else {
+                            console.log('Guest view: Tallying skipped, requires login.');
+                        }
+                    }
+                }
+                
+                if (updates.length > 0) await Promise.all(updates);
+                
+                container.innerHTML = '';
+                drafts.forEach(draft => {
+                    const card = document.createElement('div');
+                    card.className = 'draft-card';
+                    card.dataset.draftId = draft.id;
+                    card.innerHTML = `
+                        <h3>${draft.title}</h3>
+                        <p>${draft.status.replace(/_/g, ' ')}</p>
+                        <span class="draft-status ${draft.status}">${draft.status}</span>`;
+                    card.addEventListener('click', () => loadDraftDetail(draft.id));
+                    container.appendChild(card);
+                });
+                
+            } catch (error) { console.error("Error loading drafts list: ", error); }
+        }
+        
+        function loadDraftDetail(draftId) {
+            showPage('draft-detail');
+            appState.currentDraft = null; 
+            
+            const titleEl = document.getElementById('draft-detail-title');
+            const statusEl = document.getElementById('draft-detail-status');
+            const descEl = document.getElementById('draft-detail-desc');
+            const adviceSection = document.getElementById('draft-advice-section');
+            const votingSection = document.getElementById('draft-voting-section');
+            const resultSection = document.getElementById('draft-result-section');
+            const activationSection = document.getElementById('draft-leader-activation-section');
+            
+            titleEl.textContent = 'Loading Draft...';
+            [adviceSection, votingSection, resultSection, activationSection].forEach(s => s.classList.add('hidden'));
+
+            appState.listeners.draftDetail = db.collection('drafts').doc(draftId).onSnapshot(doc => {
+                if (!doc.exists) { showPage('drafts-list'); return; }
+                
+                const draft = { id: doc.id, ...doc.data() };
+                appState.currentDraft = draft; 
+                
+                titleEl.textContent = draft.title;
+                descEl.textContent = draft.description; // <pre> handles newlines
+                statusEl.textContent = draft.status.replace(/_/g, ' ');
+                statusEl.className = `draft-status ${draft.status}`;
+
+                if (draft.status === 'advice') {
+                    adviceSection.classList.remove('hidden');
+                    renderAdviceSection(draft);
+                }
+                if (draft.status === 'voting') {
+                    votingSection.classList.remove('hidden');
+                    renderVotingSection(draft);
+                }
+                if (['failed', 'passed_pending_activation', 'canceled', 'active'].includes(draft.status)) {
+                    resultSection.classList.remove('hidden');
+                    document.getElementById('draft-result-summary').textContent = draft.resultSummary || 'No summary.';
+                }
+                if (draft.status === 'passed_pending_activation' && appState.currentUser?.role === 'Leader') {
+                    activationSection.classList.remove('hidden');
+                }
+            });
+        }
+        
+        function renderAdviceSection(draft) {
+            startCountdown(document.getElementById('draft-advice-timer'), draft.adviceEndsAt.toDate());
+            const listEl = document.getElementById('draft-advice-list');
+            listEl.innerHTML = '';
+            if (draft.advice && draft.advice.length > 0) {
+                draft.advice.forEach(adv => { listEl.innerHTML += `<li><strong>${adv.userName}:</strong> ${adv.text}</li>`; });
+            } else {
+                listEl.innerHTML = '<li>No advice submitted yet.</li>';
+            }
+            if (appState.currentUser) {
+                document.getElementById('draft-advice-form').classList.remove('hidden');
+                document.getElementById('draft-advice-login-prompt').classList.add('hidden');
+            } else {
+                document.getElementById('draft-advice-form').classList.add('hidden');
+                document.getElementById('draft-advice-login-prompt').classList.remove('hidden');
+            }
+        }
+        
+        function renderVotingSection(draft) {
+            startCountdown(document.getElementById('draft-voting-timer'), draft.votingEndsAt.toDate());
+            const buttons = document.getElementById('draft-vote-buttons');
+            const message = document.getElementById('draft-voted-message');
+            const prompt = document.getElementById('draft-voting-login-prompt');
+            
+            if (appState.currentUser) {
+                prompt.classList.add('hidden');
+                const userVote = draft.votes?.find(v => v.userId === appState.currentUser.id);
+                if (userVote) {
+                    buttons.classList.add('hidden');
+                    message.classList.remove('hidden');
+                    message.textContent = `You have voted: ${userVote.vote.toUpperCase()}`;
+                } else {
+                    buttons.classList.remove('hidden');
+                    message.classList.add('hidden');
+                }
+            } else {
+                buttons.classList.add('hidden');
+                message.classList.add('hidden');
+                prompt.classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('draft-advice-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!appState.currentUser || !appState.currentDraft) return;
+            const text = document.getElementById('draft-advice-input').value;
+            if (!text) return;
+            try {
+                await db.collection('drafts').doc(appState.currentDraft.id).update({
+                    advice: FieldValue.arrayUnion({
+                        userId: appState.currentUser.id, userName: appState.currentUser.name,
+                        text: text, createdAt: new Date()
+                    })
+                });
+                document.getElementById('draft-advice-input').value = '';
+            } catch (error) { console.error("Error submitting advice: ", error); }
+        });
+        
+        document.getElementById('draft-vote-buttons').addEventListener('click', async (e) => {
+            if (e.target.tagName !== 'BUTTON' || !appState.currentUser || !appState.currentDraft) return;
+            try {
+                await db.collection('drafts').doc(appState.currentDraft.id).update({
+                    votes: FieldValue.arrayUnion({
+                        userId: appState.currentUser.id,
+                        vote: e.target.dataset.vote,
+                        weight: (appState.currentUser.role === 'Leader') ? 3 : 1
+                    })
+                });
+            } catch (error) { console.error("Error casting vote: ", error); }
+        });
+
+        document.getElementById('draft-activate-law-btn').addEventListener('click', async () => {
+            const draft = appState.currentDraft;
+            if (!draft || draft.status !== 'passed_pending_activation' || appState.currentUser?.role !== 'Leader') return;
+            if (!confirm(`Activate this law: "${draft.title}"?`)) return;
+            
+            try {
+                await db.collection('drafts').doc(draft.id).update({ status: 'active' });
+                await db.collection('rules').add({
+                    title: draft.title, description: draft.description,
+                    activatedAt: FieldValue.serverTimestamp(), draftId: draft.id
+                });
+                await db.collection('notices').add({
+                    title: "New Law Activated",
+                    content: `The proposal "${draft.title}" has passed and is now a rule.`,
+                    authorName: "Clan Command", authorId: "system", createdAt: FieldValue.serverTimestamp()
+                });
+            } catch (error) { alert("Failed to activate law."); }
+        });
+        
+        document.getElementById('back-to-drafts-list').addEventListener('click', () => showPage('drafts-list'));
+        
+        async function tallyVotes(draft) {
+            let yesVotes = 0, noVotes = 0, absentVotes = 0;
+            const votedUserIds = [];
+            
+            draft.votes?.forEach(vote => {
+                votedUserIds.push(vote.userId); 
+                if (vote.vote === 'yes') yesVotes += vote.weight;
+                else if (vote.vote === 'no') noVotes += vote.weight;
+                else absentVotes += vote.weight;
+            });
+            
+            // Fetch users IF cache is empty
+            if (appState.allUsersCache.length === 0) {
+                const usersSnapshot = await db.collection('users').where('status', '==', 'active').get();
+                appState.allUsersCache = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            }
+            
+            let totalPossibleWeightedVotes = 0;
+            appState.allUsersCache.forEach(user => {
+                const weight = (user.role === 'Leader') ? 3 : 1;
+                totalPossibleWeightedVotes += weight;
+                if (!votedUserIds.includes(user.id)) { // Add non-voters to absent
+                    absentVotes += weight;
+                }
+            });
+
+            let summary = `--- Vote Tally ---\nTotal Possible Weighted Votes: ${totalPossibleWeightedVotes}\n---------------------\n`;
+            summary += `YES: ${yesVotes}\nNO: ${noVotes}\nABSENT (Voted + Non-Voted): ${absentVotes}\n---------------------\n`;
+
+            if (absentVotes / totalPossibleWeightedVotes >= (1/3)) {
+                summary += `Result: CANCELED (Over 1/3 abstention)`;
+                return { newStatus: 'canceled', summary: summary };
+            }
+            const totalDecisionVotes = yesVotes + noVotes;
+            if (totalDecisionVotes === 0) {
+                summary += `Result: FAILED (No 'Yes' or 'No' votes cast)`;
+                return { newStatus: 'failed', summary: summary };
+            }
+            if (yesVotes > (totalDecisionVotes / 2)) {
+                summary += `Result: PASSED (Majority 'Yes' vote)`;
+                return { newStatus: 'passed_pending_activation', summary: summary };
+            } else {
+                summary += `Result: FAILED (Did not achieve majority 'Yes' vote)`;
+                return { newStatus: 'failed', summary: summary };
+            }
+        }
+        
+        // =================================================================
+        // 8. NEW: PUBLIC SUBMISSION PAGES
+        // =================================================================
+        
+        function loadDmPage() {
+            if (appState.currentUser) {
+                document.getElementById('leader-dm-form').classList.remove('hidden');
+                document.getElementById('dm-login-prompt').classList.add('hidden');
+            } else {
+                document.getElementById('leader-dm-form').classList.add('hidden');
+                document.getElementById('dm-login-prompt').classList.remove('hidden');
+            }
+        }
+        document.getElementById('leader-dm-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!appState.currentUser) return;
+            try {
+                await db.collection('dms').add({
+                    subject: document.getElementById('dm-subject').value,
+                    text: document.getElementById('dm-message').value,
+                    userId: appState.currentUser.id,
+                    userName: appState.currentUser.name,
+                    createdAt: FieldValue.serverTimestamp()
+                });
+                alert('Message sent to Leader.');
+                e.target.reset();
+                showPage('home');
+            } catch (error) { alert('Could not send message.'); }
+        });
+        
+        function loadAdvisoryPage() {
+            if (appState.currentUser) {
+                document.getElementById('advisory-form').classList.remove('hidden');
+                document.getElementById('advisory-login-prompt').classList.add('hidden');
+            } else {
+                document.getElementById('advisory-form').classList.add('hidden');
+                document.getElementById('advisory-login-prompt').classList.remove('hidden');
+            }
+        }
+        document.getElementById('advisory-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!appState.currentUser) return;
+            try {
+                await db.collection('advice').add({
+                    subject: document.getElementById('advisory-subject').value,
+                    text: document.getElementById('advisory-message').value,
+                    userId: appState.currentUser.id,
+                    userName: appState.currentUser.name,
+                    createdAt: FieldValue.serverTimestamp()
+                });
+                alert('Advice submitted to Leader.');
+                e.target.reset();
+                showPage('home');
+            } catch (error) { alert('Could not submit advice.'); }
+        });
+        
+        // =================================================================
+        // 9. NEW: PLAYER DASHBOARD
+        // =================================================================
+        
+        function loadPlayerDashboard() {
+            // Hide all widgets
+            document.querySelectorAll('#page-player-dashboard .widget').forEach(w => w.classList.add('hidden'));
+            
+            if (!appState.currentUser) {
+                document.getElementById('player-dash-guest').classList.remove('hidden');
+                return;
+            }
+            
+            if (appState.currentUser.role === 'Leader') {
+                showPage('leader-dashboard'); // Redirect Leader
+                return;
+            }
+            
+            let widgetId;
+            switch (appState.currentUser.role) {
+                case 'Member': widgetId = 'player-dash-member'; break;
+                case 'Elder': widgetId = 'player-dash-elder'; break;
+                case 'Co-Leader': widgetId = 'player-dash-coleader'; break;
+            }
+            
+            const widget = document.getElementById(widgetId);
+            if (!widget) return;
+            
+            widget.classList.remove('hidden');
+            widget.querySelector('.player-name').textContent = appState.currentUser.name;
+            widget.querySelector('.player-clan').textContent = appState.currentUser.clanName;
+            
+            // Load powers
+            if (appState.currentUser.role === 'Elder') {
+                loadChatLog('general', 'elder-chat-log-ga');
+            }
+            if (appState.currentUser.role === 'Co-Leader') {
+                loadChatLog('general', 'coleader-chat-log-ga');
+                loadChatLog('special', 'coleader-chat-log-sa');
+            }
+        }
+        
+        // Helper for Player Dash
+        function loadChatLog(type, elementId) {
+            const logEl = document.getElementById(elementId);
+            appState.listeners[elementId] = db.collection('messages').doc(type).collection('chats')
+                .orderBy('createdAt', 'desc').limit(10)
+                .onSnapshot(snapshot => {
+                    logEl.innerHTML = '';
+                    snapshot.docs.reverse().forEach(doc => {
+                        const msg = doc.data();
+                        logEl.innerHTML += `<p><strong>${msg.userName}:</strong> ${msg.text.substring(0, 50)}...</p>`;
+                    });
+                });
+        }
+        
+        // Co-Leader Mute Form
+        document.getElementById('co-leader-mute-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const playerId = document.getElementById('mute-player-id').value.trim();
+            const hours = parseInt(document.getElementById('mute-duration').value);
+            const mutedUntil = new Date(new Date().getTime() + hours * 60 * 60 * 1000);
+            
+            if (!playerId) { alert('Please enter a Player ID.'); return; }
+            
+            try {
+                await db.collection('users').doc(playerId).update({ mutedUntil: mutedUntil });
+                alert(`Player ${playerId} has been muted for ${hours} hour(s).`);
+                e.target.reset();
+            } catch (error) {
+                alert('Could not mute player. Check the Player ID.');
+            }
+        });
+
+        // =================================================================
+        // 10. LEADER DASHBOARD (WITH UPLOAD FIX)
+        // =================================================================
+
+        function loadLeaderDashboard() {
+            document.getElementById('leader-dash-main').classList.add('active');
+            document.querySelectorAll('.leader-section:not(#leader-dash-main)').forEach(s => s.classList.remove('active'));
+            loadAllUsersCache(); // Pre-load cache
+            loadCabinetData();
+        }
+        
+        async function loadAllUsersCache() {
+            if (appState.allUsersCache.length > 0) return; // Don't refetch
+            const usersSnapshot = await db.collection('users').get();
+            appState.allUsersCache = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+        
+        async function loadCabinetData() {
+            const doc = await db.collection('meta').doc('main').get();
+            appState.currentCabinet = doc.data().cabinet || [];
+        }
+
+        document.getElementById('leader-dash-main').addEventListener('click', (e) => {
+            if (e.target.classList.contains('dashboard-grid-btn') && e.target.dataset.section) {
+                showLeaderSection(e.target.dataset.section);
+            }
+        });
+        
+        document.querySelectorAll('.leader-back-btn').forEach(btn => {
+            btn.addEventListener('click', () => showLeaderSection('main'));
+        });
+
+        function showLeaderSection(section) {
+            document.querySelectorAll('.leader-section').forEach(s => s.classList.remove('active'));
+            if (section === 'main') {
+                document.getElementById('leader-dash-main').classList.add('active');
+            } else {
+                document.getElementById(`leader-section-${section}`).classList.add('active');
+                switch (section) {
+                    case 'new-registrations': loadNewRegistrations(); break;
+                    case 'player-management': loadPlayerManagement(); break;
+                    case 'pdf-management': loadPdfManagementList(); break;
+                    case 'image-management': loadImageManagementList(); break;
+                    case 'cabinet-management': loadCabinetManagement(); break;
+                    case 'inbox-quarry': loadInbox('dms', 'inbox-quarry-list'); break;
+                    case 'inbox-advisory': loadInbox('advice', 'inbox-advisory-list'); break;
+                }
+            }
+        }
+        
+        async function loadNewRegistrations() {
+            const list = document.getElementById('new-registrations-list');
+            list.innerHTML = '<p>Loading...</p>';
+            const doc = await db.collection('meta').doc('main').get();
+            const newRegs = doc.data()?.newRegistrations || [];
+            if (newRegs.length === 0) { list.innerHTML = '<p>No new registrations.</p>'; return; }
+            list.innerHTML = '';
+            newRegs.forEach((user, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.background = '#f9f9f9';
+                card.innerHTML = `
+                    <h4>${user.name} (${user.id})</h4>
+                    <p>Role: ${user.role} | Country: ${user.country}</p>
+                    <p>Password: <span class="registration-password">${user.password}</span></p>
+                    <button class="btn btn-success btn-sm">Acknowledge</button>`;
+                card.querySelector('button').addEventListener('click', async () => {
+                    if (confirm(`Acknowledge ${user.name}?`)) {
+                        await db.collection('meta').doc('main').update({
+                            newRegistrations: FieldValue.arrayRemove(user)
+                        });
+                        loadNewRegistrations(); // Refresh
+                    }
+                });
+                list.appendChild(card);
+            });
+        }
+        
+        function loadPlayerManagement() {
+            const tbody = document.getElementById('player-management-table').querySelector('tbody');
+            tbody.innerHTML = ''; 
+            appState.allUsersCache.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.dataset.userId = user.id;
+                tr.innerHTML = `
+                    <td><b>${user.name}</b><br><small>${user.id}</small></td>
+                    <td>
+                        <select class="form-control role-select" ${user.role === 'Leader' ? 'disabled' : ''}>
+                            <option value="Member" ${user.role === 'Member' ? 'selected' : ''}>Member</option>
+                            <option value="Elder" ${user.role === 'Elder' ? 'selected' : ''}>Elder</option>
+                            <option value="Co-Leader" ${user.role === 'Co-Leader' ? 'selected' : ''}>Co-Leader</option>
+                        </select>
+                    </td>
+                    <td><span class="draft-status ${user.status}">${user.status}</span></td>
+                    <td>
+                        ${user.status !== 'suspended' ? `<button class="btn btn-warning btn-sm status-btn" data-action="suspended">Suspend</button>` : ''}
+                        ${user.status !== 'banned' ? `<button class="btn btn-danger btn-sm status-btn" data-action="banned">Ban</button>` : ''}
+                        ${user.status !== 'active' ? `<button class="btn btn-success btn-sm status-btn" data-action="active">Reactivate</button>` : ''}
+                        ${user.role !== 'Leader' ? `<button class="btn btn-danger btn-sm delete-user-btn">Delete</button>` : ''}
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+            tbody.removeEventListener('change', handlePlayerMgmtChange);
+            tbody.removeEventListener('click', handlePlayerMgmtClick);
+            tbody.addEventListener('change', handlePlayerMgmtChange);
+            tbody.addEventListener('click', handlePlayerMgmtClick);
+        }
+        
+        async function handlePlayerMgmtChange(e) {
+            if (e.target.classList.contains('role-select')) {
+                const newRole = e.target.value;
+                const userId = e.target.closest('tr').dataset.userId;
+                if (confirm(`Change ${userId}'s role to ${newRole}?`)) {
+                    await db.collection('users').doc(userId).update({ role: newRole });
+                    appState.allUsersCache.find(u => u.id === userId).role = newRole;
+                    loadPlayerManagement(); 
+                }
+            }
+        }
+        async function handlePlayerMgmtClick(e) {
+            const target = e.target;
+            const tr = target.closest('tr');
+            if (!tr) return;
+            const userId = tr.dataset.userId;
+            if (target.classList.contains('status-btn')) {
+                const newStatus = target.dataset.action;
+                if (confirm(`Set ${userId}'s status to ${newStatus}?`)) {
+                    await db.collection('users').doc(userId).update({ status: newStatus });
+                    appState.allUsersCache.find(u => u.id === userId).status = newStatus;
+                    loadPlayerManagement(); 
+                }
+            }
+            if (target.classList.contains('delete-user-btn')) {
+                if (confirm(`PERMANENTLY DELETE user ${userId}?`)) {
+                    await db.collection('users').doc(userId).delete();
+                    appState.allUsersCache = appState.allUsersCache.filter(u => u.id !== userId);
+                    loadPlayerManagement(); 
+                }
+            }
+        }
+
+        // --- FIXED PDF Upload with Progress ---
+        document.getElementById('pdf-upload-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const title = document.getElementById('pdf-upload-title').value;
+            const desc = document.getElementById('pdf-upload-desc').value;
+            const file = document.getElementById('pdf-upload-file').files[0];
+            const progressEl = document.getElementById('pdf-upload-progress');
+            if (!file || !title || !desc) return;
+            
+            form.style.pointerEvents = 'none';
+            progressEl.textContent = 'Starting upload...';
+            
+            const storagePath = `rankings/pdf/${Date.now()}_${file.name}`;
+            const storageRef = storage.ref(storagePath);
+            const uploadTask = storageRef.put(file);
+
+            uploadTask.on('state_changed', 
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    progressEl.textContent = `Uploading ${Math.round(progress)}%...`;
+                }, 
+                (error) => {
+                    console.error("Upload failed: ", error);
+                    progressEl.textContent = 'Upload failed. Please try again.';
+                    form.style.pointerEvents = 'auto';
+                }, 
+                async () => {
+                    const url = await uploadTask.snapshot.ref.getDownloadURL();
+                    await db.collection('pdfRankings').add({
+                        title, description: desc, url, storagePath,
+                        uploadedAt: FieldValue.serverTimestamp()
+                    });
+                    progressEl.textContent = 'Upload complete! ✅';
+                    form.reset();
+                    form.style.pointerEvents = 'auto';
+                }
+            );
+        });
+        
+        // --- FIXED Image Upload with Compression & Progress ---
+        document.getElementById('image-upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const title = document.getElementById('image-upload-title').value;
+            const file = document.getElementById('image-upload-file').files[0];
+            const progressEl = document.getElementById('image-upload-progress');
+            if (!file || !title) return;
+
+            form.style.pointerEvents = 'none';
+            progressEl.textContent = 'Compressing image...';
+            
+            try {
+                // 1. Compress Image
+                const compressedBlob = await compressImage(file);
+                progressEl.textContent = 'Image compressed. Starting upload...';
+                
+                // 2. Upload Compressed Blob
+                const storagePath = `rankings/image/${Date.now()}_${file.name.split('.')[0]}.jpg`;
+                const storageRef = storage.ref(storagePath);
+                const uploadTask = storageRef.put(compressedBlob);
+                
+                uploadTask.on('state_changed', 
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        progressEl.textContent = `Uploading ${Math.round(progress)}%...`;
+                    }, 
+                    (error) => {
+                        console.error("Upload failed: ", error);
+                        progressEl.textContent = 'Upload failed. Please try again.';
+                        form.style.pointerEvents = 'auto';
+                    }, 
+                    async () => {
+                        const url = await uploadTask.snapshot.ref.getDownloadURL();
+                        await db.collection('imageRankings').add({
+                            title, url, storagePath,
+                            uploadedAt: FieldValue.serverTimestamp()
+                        });
+                        progressEl.textContent = 'Upload complete! ✅';
+                        form.reset();
+                        form.style.pointerEvents = 'auto';
+                    }
+                );
+            } catch (error) {
+                console.error("Image processing error:", error);
+                progressEl.textContent = 'Image processing failed.';
+                form.style.pointerEvents = 'auto';
+            }
+        });
+        
+        function compressImage(file, maxWidth = 1920) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                img.onload = () => {
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > maxWidth) {
+                        height = (maxWidth / width) * height;
+                        width = maxWidth;
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    ctx.canvas.toBlob((blob) => {
+                        resolve(blob);
+                    }, 'image/jpeg', 0.8); // 80% quality
+                };
+                img.onerror = (error) => reject(error);
+            });
+        }
+        
+        // --- Lists with Delete ---
+        function loadPdfManagementList() {
+            const list = document.getElementById('pdf-management-list');
+            appState.listeners.pdfMgmt = db.collection('pdfRankings').orderBy('uploadedAt', 'desc').onSnapshot(snapshot => {
+                list.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const pdf = doc.data();
+                    const item = document.createElement('div');
+                    item.className = 'ranking-item-pdf';
+                    item.innerHTML = `
+                        <div class="info"><h4>${pdf.title}</h4><p>${pdf.description}</p></div>
+                        <button class="btn btn-danger btn-sm" data-id="${doc.id}" data-path="${pdf.storagePath}">Delete</button>`;
+                    item.querySelector('button').addEventListener('click', deleteRankingItem);
+                    list.appendChild(item);
+                });
+            });
+        }
+        function loadImageManagementList() {
+            const grid = document.getElementById('image-management-list');
+            appState.listeners.imageMgmt = db.collection('imageRankings').orderBy('uploadedAt', 'desc').onSnapshot(snapshot => {
+                grid.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const img = doc.data();
+                    const item = document.createElement('div');
+                    item.className = 'ranking-card-image';
+                    item.innerHTML = `
+                        <img src="${img.url}" alt="${img.title}"><h4>${img.title}</h4>
+                        <button class="btn btn-danger btn-sm" data-id="${doc.id}" data-path="${img.storagePath}" style="width: 90%; margin: 0 5% 10px 5%;">Delete</button>`;
+                    item.querySelector('button').addEventListener('click', deleteRankingItem);
+                    grid.appendChild(item);
+                });
+            });
+        }
+        async function deleteRankingItem(e) {
+            const { id: docId, path: storagePath } = e.target.dataset;
+            const collectionName = storagePath.includes('/pdf/') ? 'pdfRankings' : 'imageRankings';
+            if (!confirm(`Delete this item?`)) return;
+            try {
+                await storage.ref(storagePath).delete();
+                await db.collection(collectionName).doc(docId).delete();
+            } catch (error) { alert("Delete failed. File might be missing."); }
+        }
+        
+        // --- Draft Management & Publish ---
+        document.getElementById('draft-create-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('draft-create-title').value;
+            const desc = document.getElementById('draft-create-desc').value;
+            const now = new Date();
+            const adviceEnds = new Date(now.getTime() + 5 * 60 * 60 * 1000); // 5 hours
+            const votingEnds = new Date(now.getTime() + 13 * 60 * 60 * 1000); // 13 hours
+            
+            try {
+                // 1. Create Draft
+                await db.collection('drafts').add({
+                    title, description: desc, status: 'advice',
+                    createdAt: FieldValue.serverTimestamp(),
+                    adviceEndsAt: adviceEnds, votingEndsAt: votingEnds,
+                    createdBy: appState.currentUser.id, votes: [], advice: []
+                });
+                
+                // 2. Publish system message to chats
+                const systemMessage = {
+                    text: `New Draft Published: "${title}". Go to the Voting page to participate.`,
+                    userId: 'system', userName: 'Clan Command', userRole: 'System',
+                    type: 'text', url: null, createdAt: FieldValue.serverTimestamp()
+                };
+                await db.collection('messages').doc('general').collection('chats').add(systemMessage);
+                await db.collection('messages').doc('special').collection('chats').add(systemMessage);
+                
+                alert('Draft created and published to chats!');
+                e.target.reset();
+                showPage('drafts-list');
+            } catch (error) { alert("Failed to create draft."); }
+        });
+        
+        // --- Cabinet Management ---
+        function loadCabinetManagement() {
+            const list = document.getElementById('cabinet-checkbox-list');
+            list.innerHTML = '';
+            const candidates = appState.allUsersCache.filter(u => ['Elder', 'Co-Leader'].includes(u.role));
+            if (candidates.length === 0) { list.innerHTML = '<p>No Elders or Co-Leaders found.</p>'; return; }
+            candidates.forEach(user => {
+                const isChecked = appState.currentCabinet.includes(user.id);
+                list.innerHTML += `
+                    <div class="form-group">
+                        <input type="checkbox" id="cab-${user.id}" value="${user.id}" ${isChecked ? 'checked' : ''}>
+                        <label for="cab-${user.id}">${user.name} (${user.role})</label>
+                    </div>`;
+            });
+        }
+        document.getElementById('cabinet-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const selectedIds = Array.from(e.target.querySelectorAll('input:checked')).map(cb => cb.value);
+            if (selectedIds.length > 5) { alert('Max 5 members.'); return; }
+            try {
+                await db.collection('meta').doc('main').update({ cabinet: selectedIds });
+                appState.currentCabinet = selectedIds; 
+                alert('Cabinet updated.');
+            } catch (error) { alert('Failed to update.'); }
+        });
+        
+        // --- Inboxes ---
+        function loadInbox(collectionName, elementId) {
+            const list = document.getElementById(elementId);
+            list.innerHTML = '<p>Loading...</p>';
+            appState.listeners[elementId] = db.collection(collectionName).orderBy('createdAt', 'desc').limit(20)
+                .onSnapshot(snapshot => {
+                    if (snapshot.empty) { list.innerHTML = '<p>Inbox empty.</p>'; return; }
+                    list.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const msg = doc.data();
+                        const card = document.createElement('div');
+                        card.className = 'card';
+                        card.innerHTML = `
+                            <h4>From: ${msg.userName} (${msg.userId})</h4>
+                            <p><strong>Subject:</strong> ${msg.subject}</p>
+                            <p>${msg.text}</p>
+                            <small>${msg.createdAt.toDate().toLocaleString()}</small><br>
+                            <button class="btn btn-sm btn-danger" data-id="${doc.id}">Delete</button>`;
+                        card.querySelector('button').addEventListener('click', async () => {
+                            if (confirm('Delete?')) {
+                                await db.collection(collectionName).doc(doc.id).delete();
+                            }
+                        });
+                        list.appendChild(card);
+                    });
+                });
+        }
+        
+        // =================================================================
+        // 11. NEW: FORCE MODE / GOD MODE
+        // =================================================================
+        
+        const forceBtn = document.getElementById('forcefully-btn');
+        const forceModals = {
+            1: document.getElementById('modal-force-verify-1'),
+            2: document.getElementById('modal-force-verify-2'),
+            3: document.getElementById('modal-force-captcha'),
+            4: document.getElementById('modal-force-reason'),
+            5: document.getElementById('modal-force-warning'),
+            6: document.getElementById('modal-force-unlocked')
+        };
+        const forceModalErrors = {
+            1: document.getElementById('force-modal-error-1'),
+            2: document.getElementById('force-modal-error-2'),
+            3: document.getElementById('force-modal-error-3'),
+            4: document.getElementById('force-modal-error-4')
+        };
+        
+        forceBtn.addEventListener('click', () => showForceModal(1));
+        
+        document.querySelectorAll('.modal-close-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                Object.values(forceModals).forEach(modal => modal.classList.add('hidden'));
+            });
+        });
+
+        function showForceModal(step) {
+            Object.values(forceModals).forEach(modal => modal.classList.add('hidden'));
+            if (forceModals[step]) {
+                forceModals[step].classList.remove('hidden');
+                // Special setup for captcha
+                if (step === 3) generateCaptcha();
+            }
+        }
+        
+        function forceAuthCheck(step) {
+            const id = document.getElementById(`force-id-${step}`).value.trim();
+            const pass = document.getElementById(`force-pass-${step}`).value;
+            const errEl = forceModalErrors[step];
+            
+            if (id !== appState.currentUser.id || pass !== appState.currentUser.password) {
+                showError(errEl, 'Invalid credentials.');
+                return false;
+            }
+            showError(errEl, '');
+            return true;
+        }
+
+        document.getElementById('force-form-1').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (forceAuthCheck(1)) showForceModal(2);
+        });
+        document.getElementById('force-form-2').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (forceAuthCheck(2)) showForceModal(3);
+        });
+        
+        function generateCaptcha() {
+            appState.currentCaptcha = Math.random().toString(36).substring(2, 8).replace(/[ilI1oO0]/g, 'a'); // Avoid confusing chars
+            document.getElementById('modal-captcha-image').textContent = appState.currentCaptcha;
+        }
+        
+        document.getElementById('force-form-3').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('force-captcha-input').value;
+            if (input === appState.currentCaptcha) {
+                showError(forceModalErrors[3], '');
+                showForceModal(4);
+            } else {
+                showError(forceModalErrors[3], 'CAPTCHA does not match.');
+                generateCaptcha();
+            }
+        });
+        
+        const reasonTextarea = document.getElementById('force-reason');
+        reasonTextarea.addEventListener('input', () => {
+            const words = reasonTextarea.value.trim().split(/\s+/).filter(Boolean).length;
+            document.getElementById('word-count').textContent = `Words: ${words}`;
+        });
+        
+        document.getElementById('force-form-4').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const reason = reasonTextarea.value;
+            const words = reason.trim().split(/\s+/).filter(Boolean).length;
+            if (words < 50) {
+                showError(forceModalErrors[4], `Justification must be at least 50 words. (Current: ${words})`);
+                return;
+            }
+            showError(forceModalErrors[4], '');
+            
+            try {
+                await db.collection('auditLogs').add({
+                    type: 'ForceModeAccess',
+                    userId: appState.currentUser.id,
+                    reason: reason,
+                    timestamp: FieldValue.serverTimestamp()
+                });
+                showForceModal(5);
+            } catch (error) {
+                showError(forceModalErrors[4], 'Failed to log reason. Cannot proceed.');
+            }
+        });
+        
+        document.getElementById('force-agree-btn').addEventListener('click', () => showForceModal(6));
+        document.getElementById('open-force-dashboard-btn').addEventListener('click', () => {
+            Object.values(forceModals).forEach(modal => modal.classList.add('hidden'));
+            showPage('force-mode-dashboard');
+        });
+        
+        // --- Force Mode Dashboard ---
+        function loadForceModeDashboard() {
+            document.getElementById('force-mode-exit-btn').onclick = () => showPage('leader-dashboard');
+            loadForcePlayerManagement();
+            loadForceChatLog('general', 'force-chat-log-ga');
+            loadForceChatLog('special', 'force-chat-log-sa');
+            loadForceInbox('dms', 'force-inbox-quarry');
+            loadForceInbox('advice', 'force-inbox-advisory');
+        }
+        
+        function loadForcePlayerManagement() {
+            const tbody = document.getElementById('force-player-management-table').querySelector('tbody');
+            tbody.innerHTML = '';
+            appState.allUsersCache.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.dataset.userId = user.id;
+                const isLeader = user.role === 'Leader';
+                tr.innerHTML = `
+                    <td><b>${user.name}</b><br><small>${user.id}</small></td>
+                    <td>
+                        <select class="form-control force-role-select" ${isLeader ? 'disabled' : ''}>
+                            <option value="Member" ${user.role === 'Member' ? 'selected' : ''}>Member</option>
+                            <option value="Elder" ${user.role === 'Elder' ? 'selected' : ''}>Elder</option>
+                            <option value="Co-Leader" ${user.role === 'Co-Leader' ? 'selected' : ''}>Co-Leader</option>
+                            <option value="Leader" ${user.role === 'Leader' ? 'selected' : ''}>Leader</option>
+                        </select>
+                    </td>
+                    <td><span class="draft-status ${user.status}">${user.status}</span></td>
+                    <td><span class="draft-status ${user.chatBlocked ? 'banned' : 'active'}">${user.chatBlocked ? 'Blocked' : 'Active'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary force-edit-btn">Edit</button>
+                        <button class="btn btn-sm ${user.chatBlocked ? 'btn-success' : 'btn-warning'} force-chat-block-btn">${user.chatBlocked ? 'Unblock' : 'Block'}</button>
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+            
+            tbody.removeEventListener('click', handleForceMgmtClick);
+            tbody.removeEventListener('change', handleForceMgmtChange);
+            tbody.addEventListener('click', handleForceMgmtClick);
+            tbody.addEventListener('change', handleForceMgmtChange);
+        }
+        
+        async function handleForceMgmtClick(e) {
+            const target = e.target;
+            const tr = target.closest('tr');
+            if (!tr) return;
+            const userId = tr.dataset.userId;
+
+            if (target.classList.contains('force-edit-btn')) {
+                const user = appState.allUsersCache.find(u => u.id === userId);
+                document.getElementById('force-edit-title').textContent = `Editing Player: ${user.name}`;
+                document.getElementById('force-edit-id').value = user.id;
+                document.getElementById('force-edit-name').value = user.name;
+                document.getElementById('force-edit-password').value = '';
+                document.getElementById('modal-force-edit-player').classList.remove('hidden');
+            }
+            if (target.classList.contains('force-chat-block-btn')) {
+                const user = appState.allUsersCache.find(u => u.id === userId);
+                const newBlockStatus = !user.chatBlocked;
+                if (confirm(`${newBlockStatus ? 'Block' : 'Unblock'} chat for ${user.name}?`)) {
+                    await db.collection('users').doc(userId).update({ chatBlocked: newBlockStatus });
+                    user.chatBlocked = newBlockStatus; // Update cache
+                    loadForcePlayerManagement();
+                }
+            }
+        }
+        async function handleForceMgmtChange(e) {
+            if (e.target.classList.contains('force-role-select')) {
+                const newRole = e.target.value;
+                const userId = e.target.closest('tr').dataset.userId;
+                if (confirm(`FORCE CHANGE ${userId}'s role to ${newRole}?`)) {
+                    await db.collection('users').doc(userId).update({ role: newRole });
+                    appState.allUsersCache.find(u => u.id === userId).role = newRole;
+                    loadForcePlayerManagement();
+                }
+            }
+        }
+        
+        document.getElementById('force-edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userId = document.getElementById('force-edit-id').value;
+            const newName = document.getElementById('force-edit-name').value;
+            const newPass = document.getElementById('force-edit-password').value;
+            
+            const updates = { name: newName };
+            if (newPass) updates.password = newPass;
+            
+            if (confirm(`Save changes for ${userId}?`)) {
+                await db.collection('users').doc(userId).update(updates);
+                const user = appState.allUsersCache.find(u => u.id === userId);
+                user.name = newName;
+                if (newPass) user.password = newPass;
+                loadForcePlayerManagement();
+                document.getElementById('modal-force-edit-player').classList.add('hidden');
+            }
+        });
+
+        function loadForceChatLog(type, elementId) {
+            const logEl = document.getElementById(elementId);
+            appState.listeners[elementId] = db.collection('messages').doc(type).collection('chats')
+                .orderBy('createdAt', 'desc').limit(50).onSnapshot(snapshot => {
+                    logEl.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const msg = {id: doc.id, ...doc.data()};
+                        logEl.innerHTML += `
+                        <p style="border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 5px;">
+                            <strong>${msg.userName}:</strong> ${msg.text.substring(0, 100)}...
+                            <button class="btn btn-danger btn-sm" style="float: right;" data-chat="${type}" data-id="${msg.id}">Delete</button>
+                        </p>`;
+                    });
+                    logEl.querySelectorAll('button').forEach(btn => {
+                        btn.addEventListener('click', () => handleDeleteMessage(btn.dataset.chat, btn.dataset.id));
+                    });
+                });
+        }
+        
+        function loadForceInbox(collectionName, elementId) {
+            const list = document.getElementById(elementId);
+            list.innerHTML = '<p>Loading...</p>';
+            appState.listeners[elementId] = db.collection(collectionName).orderBy('createdAt', 'desc').limit(50)
+                .onSnapshot(snapshot => {
+                    if (snapshot.empty) { list.innerHTML = '<p>Inbox empty.</p>'; return; }
+                    list.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const msg = doc.data();
+                        list.innerHTML += `
+                        <p style="border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 5px;">
+                            <strong>From: ${msg.userName}</strong> (Subject: ${msg.subject})<br>
+                            ${msg.text.substring(0, 100)}...
+                        </p>`;
+                    });
+                });
+        }
+
+        // =================================================================
+        // 12. HELPER FUNCTIONS
+        // =================================================================
+
+        function showError(element, message) {
+            if (element) {
+                element.textContent = message;
+                element.style.display = message ? 'block' : 'none';
+            } else { console.error(message); }
+        }
+        
+        function startCountdown(element, endTime) {
+            if (element.timerInterval) clearInterval(element.timerInterval);
+            function updateTimer() {
+                const distance = endTime.getTime() - new Date().getTime();
+                if (distance < 0) {
+                    clearInterval(element.timerInterval);
+                    element.textContent = "Time's Up!";
+                    return;
+                }
+                const d = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((distance % (1000 * 60)) / 1000);
+                element.textContent = `${d}d ${h}h ${m}m ${s}s remaining`;
+            }
+            updateTimer();
+            element.timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        // =================================================================
+        // 13. INITIALIZE THE APP
+        // =================================================================
+        
+        initApp();
+
+    });
     </script>
 
 </body>
